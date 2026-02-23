@@ -126,49 +126,6 @@ function TrendingBannerSlider() {
   );
 }
 
-// ── Horizontal product carousel with touch-swipe ─────────────────────────────
-function ProductCarousel({ items, onQuickView }: { items: Product[]; onQuickView: (p: Product) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef(0);
-
-  const scroll = (dir: "left" | "right") => {
-    if (!ref.current) return;
-    ref.current.scrollBy({ left: dir === "left" ? -280 : 280, behavior: "smooth" });
-  };
-
-  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(dx) > 30) scroll(dx < 0 ? "right" : "left");
-  };
-
-  return (
-    <div className="relative">
-      <button onClick={() => scroll("left")} aria-label="Scroll left"
-        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white border border-border shadow-elegant hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex">
-        <ChevronLeft size={18} />
-      </button>
-      <div
-        ref={ref}
-        className="products-carousel px-1 pb-2"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        style={{ touchAction: "pan-x" }}
-      >
-        {items.map((p) => (
-          <div key={p.id} className="flex-shrink-0 w-44 sm:w-52 md:w-60">
-            <ProductCard product={p} onQuickView={() => onQuickView(p)} />
-          </div>
-        ))}
-      </div>
-      <button onClick={() => scroll("right")} aria-label="Scroll right"
-        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white border border-border shadow-elegant hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex">
-        <ChevronRight size={18} />
-      </button>
-    </div>
-  );
-}
-
 // ── Countdown timer ───────────────────────────────────────────────────────────
 function useCountdown(h: number, m: number, s: number) {
   const [time, setTime] = useState({ h, m, s });
@@ -293,9 +250,13 @@ export default function Index() {
           </div>
           {/* Aurore-style sliding editorial banners */}
           <TrendingBannerSlider />
-          {/* Products below the banner (4-col grid like Aurore, scrollable on mobile) */}
+          {/* Products grid: 2 cols mobile → 3 tablet → 4 desktop */}
           <div className="mt-8">
-            <ProductCarousel items={trending.length > 0 ? trending : products.slice(0, 8)} onQuickView={setQuickViewProduct} />
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {(trending.length > 0 ? trending : products.slice(0, 8)).map((p) => (
+                <ProductCard key={p.id} product={p} onQuickView={() => setQuickViewProduct(p)} />
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -312,7 +273,11 @@ export default function Index() {
               View All
             </Link>
           </div>
-          <ProductCarousel items={newArrivals.length > 0 ? newArrivals : products.slice(4, 12)} onQuickView={setQuickViewProduct} />
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {(newArrivals.length > 0 ? newArrivals : products.slice(4, 12)).map((p) => (
+              <ProductCard key={p.id} product={p} onQuickView={() => setQuickViewProduct(p)} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -368,12 +333,10 @@ export default function Index() {
               ))}
             </div>
           </div>
-          {/* Dark-style carousel */}
-          <div className="products-carousel pb-2">
+          {/* Products grid: 2 cols mobile → 3 tablet → 4 desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {bestSellers.map((p) => (
-              <div key={p.id} className="flex-shrink-0 w-52 md:w-60">
-                <ProductCard product={p} onQuickView={() => setQuickViewProduct(p)} />
-              </div>
+              <ProductCard key={p.id} product={p} onQuickView={() => setQuickViewProduct(p)} />
             ))}
           </div>
         </div>
