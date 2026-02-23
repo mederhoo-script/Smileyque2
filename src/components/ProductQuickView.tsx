@@ -74,16 +74,21 @@ export default function ProductQuickView({ product, onClose, onNavigate }: Props
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  if (!product) return null;
-
-  // Build gallery from product.images or fall back to just the single image
-  const gallery: string[] = product.images?.length
+  // Build gallery — must be above the early return so that goImg (a hook) is
+  // always called the same number of times regardless of whether product is null.
+  // (Rules of Hooks: hooks must not be conditional on render-to-render state.)
+  const gallery: string[] = product?.images?.length
     ? product.images
-    : [product.image];
+    : product
+      ? [product.image]
+      : [];
 
   const goImg = useCallback((dir: 1 | -1) => {
+    if (gallery.length === 0) return;
     setActiveImg(i => ((i + dir + gallery.length) % gallery.length));
   }, [gallery.length]);
+
+  if (!product) return null;
 
   const handleAddToCart = () => {
     for (let i = 0; i < qty; i++) addItem(product);

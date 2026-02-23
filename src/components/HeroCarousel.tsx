@@ -183,9 +183,10 @@ export default function HeroCarousel() {
   };
 
   // ── translate calculation ─────────────────────────────────────────────────
-  // Each slide occupies 100% of the left-panel width.
-  // translateX = -current * 100% + dragOffset(px)
-  const translateX = `calc(${-current * 100}% + ${dragOffset}px)`;
+  // The slide track is TOTAL×100% wide. CSS resolves percentages in translateX
+  // relative to the element's OWN width, so 100% here = the full track width.
+  // Each slide occupies 1/TOTAL of the track, so we step by (100/TOTAL)% per slide.
+  const translateX = `calc(${-current * (100 / TOTAL)}% + ${dragOffset}px)`;
 
   const slide = slides[current];
 
