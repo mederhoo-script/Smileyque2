@@ -176,6 +176,9 @@ export default function ProductQuickView({ product, onClose, onNavigate }: Props
 
               {/* Badges */}
               <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
+                {product.originalPrice && (
+                  <span className="font-inter text-[9px] tracking-[0.15em] uppercase bg-red-600 text-white px-2 py-0.5">SALE</span>
+                )}
                 {product.isNew && (
                   <span className="font-inter text-[9px] tracking-[0.15em] uppercase bg-foreground text-background px-2 py-0.5">NEW</span>
                 )}
@@ -244,7 +247,20 @@ export default function ProductQuickView({ product, onClose, onNavigate }: Props
           </div>
 
           {/* Price */}
-          <p className="font-playfair text-2xl font-bold text-foreground">{product.price}</p>
+          {/* Price — sale + struck-through original when discounted */}
+          {product.originalPrice ? (
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <span className="font-playfair text-2xl font-bold text-red-600">{product.price}</span>
+              <span className="font-playfair text-lg text-muted-foreground line-through">{product.originalPrice}</span>
+              {product.originalPriceValue && product.originalPriceValue > 0 && (
+                <span className="font-inter text-xs font-semibold tracking-wide bg-red-600 text-white px-2 py-0.5 self-center">
+                  -{Math.round((1 - product.priceValue / product.originalPriceValue) * 100)}% OFF
+                </span>
+              )}
+            </div>
+          ) : (
+            <p className="font-playfair text-2xl font-bold text-foreground">{product.price}</p>
+          )}
 
           <div className="w-10 h-px bg-primary" />
 

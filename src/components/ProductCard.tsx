@@ -29,6 +29,11 @@ export default function ProductCard({ product, className, onQuickView }: Product
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
+          {product.originalPrice && (
+            <span className="font-inter text-[9px] tracking-[0.15em] uppercase bg-red-600 text-white px-2 py-0.5">
+              SALE
+            </span>
+          )}
           {product.isNew && (
             <span className="font-inter text-[9px] tracking-[0.15em] uppercase bg-foreground text-background px-2 py-0.5">
               NEW
@@ -88,10 +93,21 @@ export default function ProductCard({ product, className, onQuickView }: Product
           {product.name}
         </h3>
 
-        {/* Price */}
-        <p className="font-inter text-sm font-semibold text-foreground">
-          {product.price}
-        </p>
+        {/* Price — sale price + struck-through original when discounted */}
+        {product.originalPrice ? (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-inter text-sm font-semibold text-red-600">
+              {product.price}
+            </span>
+            <span className="font-inter text-xs text-muted-foreground line-through">
+              {product.originalPrice}
+            </span>
+          </div>
+        ) : (
+          <p className="font-inter text-sm font-semibold text-foreground">
+            {product.price}
+          </p>
+        )}
 
         {/* Color swatches */}
         {product.colors && product.colors.length > 0 && (
