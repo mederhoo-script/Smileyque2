@@ -152,9 +152,9 @@ export default function Index() {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const countdown = useCountdown(10, 25, 30);
 
-  const trending = products.filter((p) => p.isTrending).slice(0, 10);
-  const newArrivals = products.filter((p) => p.isNew).slice(0, 10);
-  const bestSellers = products.filter((p) => p.featured).slice(0, 8);
+  const trending = products.filter((p) => p.isTrending);
+  const newArrivals = products.filter((p) => p.isNew);
+  const bestSellers = products.filter((p) => p.featured);
 
   const campaignItems = [
     { label: "Women", img: "/aurore/aurore-s3-img-a.jpg", link: "/collections" },
@@ -253,7 +253,7 @@ export default function Index() {
           {/* Products grid: 2 cols mobile → 3 tablet → 4 desktop */}
           <div className="mt-8">
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {(trending.length > 0 ? trending : products.slice(0, 8)).map((p) => (
+              {trending.map((p) => (
                 <ProductCard key={p.id} product={p} onQuickView={() => setQuickViewProduct(p)} />
               ))}
             </div>
@@ -274,7 +274,7 @@ export default function Index() {
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {(newArrivals.length > 0 ? newArrivals : products.slice(4, 12)).map((p) => (
+            {newArrivals.map((p) => (
               <ProductCard key={p.id} product={p} onQuickView={() => setQuickViewProduct(p)} />
             ))}
           </div>
