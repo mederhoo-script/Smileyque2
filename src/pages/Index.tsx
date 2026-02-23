@@ -1,281 +1,412 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
 import ProductQuickView from "@/components/ProductQuickView";
 import HeroCarousel from "@/components/HeroCarousel";
-import CategoryBar from "@/components/CategoryBar";
-import SkeletonCard from "@/components/SkeletonCard";
-import { products, ProductCategory } from "@/data/products";
+import { products } from "@/data/products";
 import { Product } from "@/data/products";
-import { brand } from "@/config/brand";
-import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ─── Animated section wrapper ───────────────────────────────────────────────
-function AnimatedSection({ children, className }: { children: React.ReactNode; className?: string }) {
-  const { ref, isVisible } = useScrollAnimation();
+// ── Horizontal product carousel ──────────────────────────────────────────────
+function ProductCarousel({ items, onQuickView }: { items: Product[]; onQuickView: (p: Product) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const scroll = (dir: "left" | "right") => {
+    if (!ref.current) return;
+    ref.current.scrollBy({ left: dir === "left" ? -320 : 320, behavior: "smooth" });
+  };
   return (
-    <section
-      ref={ref as React.Ref<HTMLElement>}
-      className={cn(
-        "transition-all duration-700",
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
-        className
-      )}
-    >
-      {children}
-    </section>
+    <div className="relative">
+      <button
+        onClick={() => scroll("left")}
+        aria-label="Scroll left"
+        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white border border-border shadow-elegant hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex"
+      >
+        <ChevronLeft size={18} />
+      </button>
+      <div ref={ref} className="products-carousel px-1 pb-2">
+        {items.map((p) => (
+          <div key={p.id} className="flex-shrink-0 w-52 md:w-60">
+            <ProductCard product={p} onQuickView={() => onQuickView(p)} />
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => scroll("right")}
+        aria-label="Scroll right"
+        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white border border-border shadow-elegant hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex"
+      >
+        <ChevronRight size={18} />
+      </button>
+    </div>
   );
 }
 
-export default function Index() {
-  const [selectedCategory, setSelectedCategory] = useState<ProductCategory>("All");
-  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Simulate skeleton load on first mount
+// ── Countdown timer ───────────────────────────────────────────────────────────
+function useCountdown(h: number, m: number, s: number) {
+  const [time, setTime] = useState({ h, m, s });
   useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 700);
-    return () => clearTimeout(t);
+    const id = setInterval(() => {
+      setTime((prev) => {
+        let { h, m, s } = prev;
+        if (s > 0) return { h, m, s: s - 1 };
+        if (m > 0) return { h, m: m - 1, s: 59 };
+        if (h > 0) return { h: h - 1, m: 59, s: 59 };
+        return { h: 0, m: 0, s: 0 };
+      });
+    }, 1000);
+    return () => clearInterval(id);
   }, []);
+  return time;
+}
 
-  // Filter products by selected category
-  const displayProducts = selectedCategory === "All"
-    ? products
-    : products.filter((p) => p.category === selectedCategory);
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+export default function Index() {
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const countdown = useCountdown(10, 25, 30);
+
+  const trending = products.filter((p) => p.isTrending).slice(0, 10);
+  const newArrivals = products.filter((p) => p.isNew).slice(0, 10);
+  const bestSellers = products.filter((p) => p.featured).slice(0, 8);
+
+  const campaignItems = [
+    { label: "Women", img: "/aurore/aurore-s3-img-a.jpg", link: "/collections" },
+    { label: "Men", img: "/aurore/aurore-s3-img-b.jpg", link: "/collections" },
+    { label: "Bags", img: "/aurore/aurore-s3-img-c.jpg", link: "/collections" },
+    { label: "Shoes", img: "/aurore/aurore-s3-img-d.jpg", link: "/collections" },
+    { label: "Bridal", img: "/aurore/aurore-s3-img-e.jpg", link: "/collections" },
+    { label: "Accessories", img: "/aurore/aurore-s3-img-f.jpg", link: "/collections" },
+  ];
+
+  const testimonials = [
+    {
+      avatar: "/aurore/aurore-tt-a.jpg",
+      name: "Adaeze Okonkwo",
+      role: "Lagos, Nigeria",
+      rating: 5,
+      quote: "Smileyque transformed my wedding vision into reality. Every stitch was perfection — I felt like royalty walking down the aisle.",
+    },
+    {
+      avatar: "/aurore/aurore-tt-b.jpg",
+      name: "Fatima Al-Hassan",
+      role: "Abuja, Nigeria",
+      rating: 5,
+      quote: "The attention to detail is extraordinary. My Anarkali gown drew compliments all evening. Truly bespoke luxury.",
+    },
+  ];
+
+  const brands = [
+    { img: "/aurore/aurore-mm-a.jpg", name: "Brand A" },
+    { img: "/aurore/aurore-mm-b.jpg", name: "Brand B" },
+    { img: "/aurore/aurore-mm-c.jpg", name: "Brand C" },
+    { img: "/aurore/aurore-mm-d.jpg", name: "Brand D" },
+  ];
+
+  const blogPosts = [
+    {
+      img: "/aurore/aurore-s9-img-a.jpg",
+      date: "June 12, 2025",
+      title: "5 Bridal Trends Redefining Nigerian Fashion in 2025",
+      excerpt: "From intricate hand-beading to bold Ankara-fused silhouettes, discover the looks every bride is talking about.",
+    },
+    {
+      img: "/aurore/aurore-s9-img-b.jpg",
+      date: "May 28, 2025",
+      title: "How to Style Senator Wear for Every Occasion",
+      excerpt: "Senator wear has evolved far beyond formal ceremonies. Here's how to make it work for every event.",
+    },
+    {
+      img: "/aurore/aurore-s9-img-c.jpg",
+      date: "May 10, 2025",
+      title: "The Art of Bespoke: What Goes Into a Smileyque Creation",
+      excerpt: "Behind every piece lies a process of careful consultation, measurement, and craftsmanship. We lift the curtain.",
+    },
+  ];
+
+  const instaPhotos = [
+    "/aurore/aurore-pn-a.jpg",
+    "/aurore/aurore-pn-b.jpg",
+    "/aurore/aurore-pn-c.jpg",
+    "/aurore/aurore-pn-d.jpg",
+    "/aurore/aurore-pn-e.jpg",
+    "/aurore/aurore-pn-f.jpg",
+  ];
 
   return (
     <Layout>
-      {/* ── HERO ── (original) */}
-      <section className="relative h-screen min-h-[600px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src={brand.heroImage}
-            alt="Smileyque luxury fashion hero"
-            className="w-full h-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-brand-black/60 via-brand-black/30 to-brand-black/70" />
-        </div>
 
-        <div className="relative z-10 text-center px-6 flex flex-col items-center">
-          <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-5 animate-fade-in-up opacity-0 animate-delay-100">
-            Luxury Bespoke Fashion
-          </p>
-          <h1 className="font-playfair text-6xl md:text-8xl lg:text-9xl font-semibold text-background leading-none tracking-widest mb-4 animate-fade-in-up opacity-0 animate-delay-200">
-            {brand.brandName}
-          </h1>
-          <p className="font-playfair italic text-xl md:text-3xl text-background/85 mb-2 animate-fade-in-up opacity-0 animate-delay-200">
-            {brand.tagline}
-          </p>
-          <div className="w-12 h-px bg-primary my-6 animate-fade-in-up opacity-0 animate-delay-300" />
-          <p className="font-inter text-sm text-background/70 max-w-md leading-relaxed mb-10 animate-fade-in-up opacity-0 animate-delay-300">
-            {brand.subTagline}
-          </p>
-          <div className="flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up opacity-0 animate-delay-300">
-            <Link
-              to="/collections"
-              className="font-inter text-sm tracking-[0.2em] uppercase bg-primary text-primary-foreground px-8 py-4 hover:bg-gold-light transition-colors duration-300 shadow-gold"
-            >
-              Shop Now
-            </Link>
-            <Link
-              to="/lookbook"
-              className="font-inter text-sm tracking-[0.2em] uppercase border border-background/60 text-background px-8 py-4 hover:bg-background/10 transition-colors duration-300"
-            >
-              View Lookbook
-            </Link>
-          </div>
-        </div>
+      {/* ── 1. HERO CAROUSEL ── */}
+      <HeroCarousel />
 
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
-          <span className="font-inter text-[10px] tracking-[0.25em] uppercase text-background/50">Scroll</span>
-          <div className="w-px h-8 bg-background/30" />
-        </div>
-      </section>
-
-      {/* ── MARQUEE STRIP ── */}
+      {/* ── 2. MARQUEE STRIP ── */}
       <div className="bg-primary text-primary-foreground overflow-hidden py-3">
-        <div className="flex animate-[marquee_20s_linear_infinite] whitespace-nowrap">
+        <div className="flex animate-[marquee_25s_linear_infinite] whitespace-nowrap">
           {Array.from({ length: 6 }).map((_, i) => (
             <span key={i} className="font-inter text-xs tracking-[0.3em] uppercase mx-8">
-              Women's Fashion &nbsp;•&nbsp; Men's Senator Wear &nbsp;•&nbsp; Bridal Couture &nbsp;•&nbsp; Designer Shoes &nbsp;•&nbsp; Luxury Bags
+              Women's Fashion &nbsp;•&nbsp; Men's Senator Wear &nbsp;•&nbsp; Bridal Couture &nbsp;•&nbsp; Designer Shoes &nbsp;•&nbsp; Luxury Bags &nbsp;•&nbsp; Accessories
             </span>
           ))}
         </div>
       </div>
 
-      {/* ── SLIDING FEATURED SECTION ── */}
-      <HeroCarousel />
-
-      {/* ── CATEGORY BAR ── */}
-      <CategoryBar selected={selectedCategory} onSelect={setSelectedCategory} />
-
-
-      {/* ── FEATURED / ALL PRODUCTS GRID ── */}
-      <section className="section-padding bg-background">
-        <div className="text-center mb-14">
-          <p className="font-inter text-xs tracking-[0.3em] uppercase text-primary mb-3">
-            {selectedCategory === "All" ? "Curated Selection" : selectedCategory}
-          </p>
-          <h2 className="font-playfair text-4xl md:text-5xl font-semibold">
-            {selectedCategory === "All" ? "All Collections" : `${selectedCategory} Collection`}
-          </h2>
-          <div className="gold-divider" />
-          <p className="font-inter text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-            Handpicked pieces that embody the Smileyque aesthetic — bold, refined, and unmistakably you.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 max-w-7xl mx-auto">
-          {isLoading
-            ? Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)
-            : displayProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onQuickView={() => setQuickViewProduct(product)}
-              />
-            ))}
-        </div>
-
-        {!isLoading && displayProducts.length === 0 && (
-          <div className="text-center py-20">
-            <p className="font-playfair text-2xl text-muted-foreground">No items in this category yet</p>
+      {/* ── 3. TRENDING SECTION ── */}
+      <section className="section-padding bg-background overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Trending</p>
+              <h2 className="font-playfair text-4xl md:text-5xl font-semibold">Shop The Latest Trends</h2>
+            </div>
+            <Link to="/collections" className="font-inter text-xs tracking-[0.2em] uppercase border border-foreground text-foreground px-5 py-3 hover:bg-foreground hover:text-background transition-all duration-300 hidden sm:block">
+              View All
+            </Link>
           </div>
-        )}
-
-        <div className="text-center mt-12">
-          <Link
-            to="/collections"
-            className="font-inter text-sm tracking-[0.2em] uppercase border border-foreground text-foreground px-8 py-4 hover:bg-foreground hover:text-background transition-all duration-300 inline-block"
-          >
-            View All Collections
-          </Link>
+          <ProductCarousel items={trending.length > 0 ? trending : products.slice(0, 8)} onQuickView={setQuickViewProduct} />
         </div>
       </section>
 
-
-      {/* ── BRAND PROMISE ── */}
-      <AnimatedSection className="bg-beige section-padding">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="font-inter text-xs tracking-[0.3em] uppercase text-primary mb-4">
-            The Smileyque Promise
-          </p>
-          <blockquote className="font-playfair italic text-3xl md:text-4xl leading-relaxed text-foreground/90">
-            "Every stitch is a declaration. Every silhouette, a story worth telling."
-          </blockquote>
-          <div className="gold-divider mt-8" />
-          <p className="font-inter text-sm text-muted-foreground mt-4">
-            Crafted to order. Tailored to perfection. Delivered with care.
-          </p>
+      {/* ── 4. NEW ARRIVAL SECTION ── */}
+      <section className="section-padding bg-beige overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">New Arrival</p>
+              <h2 className="font-playfair text-4xl md:text-5xl font-semibold">Fresh Off The Runway</h2>
+            </div>
+            <Link to="/collections" className="font-inter text-xs tracking-[0.2em] uppercase border border-foreground text-foreground px-5 py-3 hover:bg-foreground hover:text-background transition-all duration-300 hidden sm:block">
+              View All
+            </Link>
+          </div>
+          <ProductCarousel items={newArrivals.length > 0 ? newArrivals : products.slice(4, 12)} onQuickView={setQuickViewProduct} />
         </div>
-      </AnimatedSection>
+      </section>
 
-      {/* ── NEW ARRIVALS SPOTLIGHT ── */}
-      <AnimatedSection className="section-padding bg-background">
-        <div className="text-center mb-14">
-          <p className="font-inter text-xs tracking-[0.3em] uppercase text-primary mb-3">
-            Just Dropped
-          </p>
-          <h2 className="font-playfair text-4xl font-semibold">New Arrivals</h2>
-          <div className="gold-divider" />
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
-          {products
-            .filter((p) => p.isNew)
-            .slice(0, 8)
-            .map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onQuickView={() => setQuickViewProduct(product)}
-              />
+      {/* ── 5. CAMPAIGN STYLES ── */}
+      <section className="section-padding bg-background">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Campaign Styles</p>
+            <h2 className="font-playfair text-4xl md:text-5xl font-semibold">Shop By Category</h2>
+          </div>
+          <div className="campaign-grid">
+            {campaignItems.map((item) => (
+              <Link key={item.label} to={item.link} className="campaign-item block">
+                <img
+                  src={item.img}
+                  alt={item.label}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-brand-black/40 flex items-end p-5">
+                  <p className="font-playfair text-xl font-semibold text-white tracking-wide">{item.label}</p>
+                </div>
+              </Link>
             ))}
+          </div>
         </div>
-      </AnimatedSection>
+      </section>
 
-      {/* ── TRENDING NOW ── */}
-      <AnimatedSection className="section-padding bg-beige">
-        <div className="text-center mb-14">
-          <p className="font-inter text-xs tracking-[0.3em] uppercase text-primary mb-3">
-            🔥 Trending
-          </p>
-          <h2 className="font-playfair text-4xl font-semibold">Most Popular</h2>
-          <div className="gold-divider" />
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
-          {products
-            .filter((p) => p.isTrending)
-            .slice(0, 8)
-            .map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onQuickView={() => setQuickViewProduct(product)}
-              />
+      {/* ── 6. BEST SELLER / FLASH SALE ── */}
+      <section className="py-20 bg-brand-black overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-10 gap-6">
+            <div>
+              <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Best Seller</p>
+              <h2 className="font-playfair text-4xl md:text-5xl font-semibold text-white">Discover The Best Deal</h2>
+            </div>
+            {/* Countdown */}
+            <div className="flex items-center gap-2">
+              {[
+                { val: countdown.h, label: "Hrs" },
+                { val: countdown.m, label: "Min" },
+                { val: countdown.s, label: "Sec" },
+              ].map(({ val, label }, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="text-center">
+                    <div className="w-14 h-14 bg-white/10 border border-white/20 flex items-center justify-center">
+                      <span className="font-playfair text-2xl text-white font-semibold">{pad(val)}</span>
+                    </div>
+                    <p className="font-inter text-[10px] tracking-widest uppercase text-white/50 mt-1">{label}</p>
+                  </div>
+                  {i < 2 && <span className="font-playfair text-2xl text-primary mb-5">:</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Dark-style carousel */}
+          <div className="products-carousel pb-2">
+            {bestSellers.map((p) => (
+              <div key={p.id} className="flex-shrink-0 w-52 md:w-60">
+                <ProductCard product={p} onQuickView={() => setQuickViewProduct(p)} />
+              </div>
             ))}
+          </div>
         </div>
-      </AnimatedSection>
+      </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <AnimatedSection className="section-padding bg-background">
-        <div className="text-center mb-14">
-          <p className="font-inter text-xs tracking-[0.3em] uppercase text-primary mb-3">
-            Simple &amp; Personal
-          </p>
-          <h2 className="font-playfair text-4xl font-semibold">How to Order</h2>
-          <div className="gold-divider" />
+      {/* ── 7. THE ESSENCE LINE ── */}
+      <section className="section-padding bg-background">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Editorial</p>
+            <h2 className="font-playfair text-4xl md:text-5xl font-semibold">The Essence Line</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {["/aurore/aurore-s4-img-a.jpg", "/aurore/aurore-s4-img-b.jpg"].map((img, i) => (
+              <div key={i} className="relative aspect-[3/4] overflow-hidden group img-zoom">
+                <img src={img} alt={`Essence ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                <div className="absolute inset-0 bg-brand-black/20 group-hover:bg-brand-black/35 transition-colors duration-500 flex items-end p-8">
+                  <div>
+                    <p className="font-inter text-xs tracking-[0.3em] uppercase text-primary mb-2">Collection</p>
+                    <p className="font-playfair text-2xl text-white font-semibold">
+                      {i === 0 ? "The Feminine Edit" : "The Power Silhouette"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-4xl mx-auto">
+      {/* ── 8. GOLDEN HOUR ── */}
+      <section className="relative overflow-hidden">
+        <div className="grid grid-cols-2 md:grid-cols-4 h-96 md:h-[500px]">
           {[
-            {
-              step: "01",
-              title: "Browse & Select",
-              desc: "Explore our collections and add your desired pieces to your cart.",
-            },
-            {
-              step: "02",
-              title: "Send via WhatsApp",
-              desc: "Click 'Send Order via WhatsApp' — your selections are pre-filled automatically.",
-            },
-            {
-              step: "03",
-              title: "We Craft & Deliver",
-              desc: "We confirm your measurements, craft your piece, and arrange delivery.",
-            },
-          ].map(({ step, title, desc }) => (
-            <div key={step} className="text-center">
-              <p className="font-playfair text-5xl font-semibold text-primary/30 mb-3">
-                {step}
-              </p>
-              <h3 className="font-playfair text-lg font-semibold mb-2">{title}</h3>
-              <p className="font-inter text-sm text-muted-foreground leading-relaxed">{desc}</p>
+            "/aurore/aurore-s7-img-a.jpg",
+            "/aurore/aurore-s7-img-b.jpg",
+            "/aurore/aurore-s7-img-c.jpg",
+            "/aurore/aurore-s7-img-d.jpg",
+          ].map((img, i) => (
+            <div key={i} className="relative overflow-hidden group img-zoom">
+              <img src={img} alt={`Golden Hour ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+              <div className="absolute inset-0 bg-brand-black/30" />
             </div>
           ))}
         </div>
-      </AnimatedSection>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center">
+            <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-3">Lookbook</p>
+            <h2 className="font-playfair text-5xl md:text-7xl font-semibold text-white drop-shadow-lg">Golden Hour</h2>
+            <div className="w-12 h-px bg-primary mx-auto my-5" />
+            <Link
+              to="/lookbook"
+              className="pointer-events-auto font-inter text-xs tracking-[0.25em] uppercase border border-white/70 text-white px-7 py-3 hover:bg-white/10 transition-colors duration-300"
+            >
+              View Lookbook
+            </Link>
+          </div>
+        </div>
+      </section>
 
-      {/* ── FULL-WIDTH CTA BANNER ── */}
-      <section className="relative h-80 flex items-center justify-center overflow-hidden">
-        <img
-          src="/images/complete/fashion29.jpg"
-          alt="Smileyque fashion editorial"
-          className="absolute inset-0 w-full h-full object-cover object-top"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-brand-black/65" />
-        <div className="relative z-10 text-center px-6">
-          <h2 className="font-playfair text-4xl md:text-5xl text-background font-semibold mb-6">
-            Your Story. Your Style.
-          </h2>
-          <Link
-            to="/collections"
-            className="font-inter text-sm tracking-[0.2em] uppercase bg-primary text-primary-foreground px-8 py-4 hover:bg-gold-light transition-colors duration-300"
-          >
-            Shop Collections
-          </Link>
+      {/* ── 9. TESTIMONIALS ── */}
+      <section className="section-padding bg-beige">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Reviews</p>
+            <h2 className="font-playfair text-4xl md:text-5xl font-semibold">What Our Clients Say</h2>
+            <div className="gold-divider" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {testimonials.map((t, i) => (
+              <div key={i} className="bg-white p-8 border border-border">
+                <div className="flex items-center gap-1 mb-4">
+                  {Array.from({ length: t.rating }).map((_, j) => (
+                    <Star key={j} size={14} className="fill-primary text-primary" />
+                  ))}
+                </div>
+                <blockquote className="font-playfair italic text-lg text-foreground/80 leading-relaxed mb-6">
+                  "{t.quote}"
+                </blockquote>
+                <div className="flex items-center gap-4">
+                  <img src={t.avatar} alt={t.name} className="w-12 h-12 object-cover" loading="lazy" />
+                  <div>
+                    <p className="font-playfair font-semibold text-foreground">{t.name}</p>
+                    <p className="font-inter text-xs text-muted-foreground">{t.role}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 10. SHOP BY TOP BRANDS ── */}
+      <section className="py-16 bg-background border-y border-border">
+        <div className="max-w-5xl mx-auto px-6 md:px-12">
+          <div className="text-center mb-10">
+            <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Partners</p>
+            <h2 className="font-playfair text-3xl md:text-4xl font-semibold">Shop By Top Brands</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center">
+            {brands.map((b, i) => (
+              <div key={i} className="flex items-center justify-center p-4 border border-border hover:border-primary transition-colors duration-300">
+                <img src={b.img} alt={b.name} className="h-16 object-contain grayscale hover:grayscale-0 transition-all duration-300" loading="lazy" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 11. LATEST BLOG ── */}
+      <section className="section-padding bg-beige">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Journal</p>
+            <h2 className="font-playfair text-4xl md:text-5xl font-semibold">Latest From The Blog</h2>
+            <div className="gold-divider" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {blogPosts.map((post, i) => (
+              <article key={i} className="group bg-white border border-border overflow-hidden">
+                <div className="aspect-[4/3] overflow-hidden img-zoom">
+                  <img src={post.img} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+                <div className="p-6">
+                  <p className="font-inter text-xs text-muted-foreground mb-2 tracking-wide">{post.date}</p>
+                  <h3 className="font-playfair text-lg font-semibold leading-snug mb-3 group-hover:text-primary transition-colors duration-200">
+                    {post.title}
+                  </h3>
+                  <p className="font-inter text-xs text-muted-foreground leading-relaxed mb-4 line-clamp-3">{post.excerpt}</p>
+                  <Link
+                    to="/about"
+                    className="font-inter text-xs tracking-[0.2em] uppercase text-foreground border-b border-foreground pb-px hover:text-primary hover:border-primary transition-colors duration-200"
+                  >
+                    Read More
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 12. INSTAGRAM GRID ── */}
+      <section className="section-padding bg-background">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Follow Us</p>
+            <h2 className="font-playfair text-4xl md:text-5xl font-semibold">@smileyque</h2>
+            <div className="gold-divider" />
+            <p className="font-inter text-sm text-muted-foreground">Follow us on Instagram for daily style inspiration</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {instaPhotos.map((img, i) => (
+              <a
+                key={i}
+                href={`https://instagram.com/smileyque`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="aspect-square overflow-hidden group img-zoom block"
+              >
+                <img src={img} alt={`@smileyque post ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+              </a>
+            ))}
+          </div>
         </div>
       </section>
 

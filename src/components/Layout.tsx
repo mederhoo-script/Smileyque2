@@ -22,26 +22,40 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Footer */}
       <footer className="bg-brand-black text-background/70 font-inter text-sm">
-        <div className="px-6 md:px-12 lg:px-20 py-12 grid grid-cols-1 md:grid-cols-3 gap-10">
-          <div>
+        <div className="px-6 md:px-12 lg:px-20 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          {/* Col 1: About + Newsletter */}
+          <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <img
-                src={brand.logo}
-                alt={brand.brandName}
-                className="h-10 w-auto"
-              />
+              <img src={brand.logo} alt={brand.brandName} className="h-10 w-auto" />
               <p className="font-playfair text-2xl text-background font-semibold tracking-wider">
                 {brand.brandName}
               </p>
             </div>
-            <p className="text-background/60 text-xs leading-relaxed">
+            <p className="text-background/60 text-xs leading-relaxed mb-6">
               {brand.tagline} — {brand.subTagline}
             </p>
+            <p className="font-inter text-xs tracking-[0.2em] uppercase text-primary mb-3">Newsletter</p>
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className="flex gap-0"
+            >
+              <input
+                type="email"
+                placeholder="Your email address"
+                className="flex-1 bg-white/10 border border-white/20 text-background placeholder:text-background/40 text-xs px-3 py-2.5 focus:outline-none focus:border-primary"
+              />
+              <button
+                type="submit"
+                className="font-inter text-[10px] tracking-[0.2em] uppercase bg-primary text-primary-foreground px-4 py-2.5 hover:bg-gold-light transition-colors duration-200 whitespace-nowrap"
+              >
+                Subscribe
+              </button>
+            </form>
           </div>
+
+          {/* Col 2: Quick Links */}
           <div>
-            <p className="font-inter text-xs tracking-[0.2em] uppercase text-primary mb-4">
-              Navigate
-            </p>
+            <p className="font-inter text-xs tracking-[0.2em] uppercase text-primary mb-4">Quick Links</p>
             <ul className="space-y-2">
               {[
                 ["Home", "/"],
@@ -51,9 +65,53 @@ export default function Layout({ children }: LayoutProps) {
                 ["Contact", "/contact"],
               ].map(([label, href]) => (
                 <li key={href}>
+                  <a href={href} className="text-background/60 hover:text-primary transition-colors duration-200 text-xs">
+                    {label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Col 3: Customer Care */}
+          <div>
+            <p className="font-inter text-xs tracking-[0.2em] uppercase text-primary mb-4">Customer Care</p>
+            <ul className="space-y-2">
+              {[
+                "How to Order",
+                "Size Guide",
+                "Delivery Info",
+                "Returns Policy",
+                "FAQ",
+              ].map((item) => (
+                <li key={item}>
+                  <a href="/contact" className="text-background/60 hover:text-primary transition-colors duration-200 text-xs">
+                    {item}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <address className="not-italic text-background/50 text-xs leading-relaxed mt-6 space-y-1">
+              <p>{brand.phone}</p>
+              <p>{brand.email}</p>
+            </address>
+          </div>
+
+          {/* Col 4: Follow Us */}
+          <div>
+            <p className="font-inter text-xs tracking-[0.2em] uppercase text-primary mb-4">Follow Us</p>
+            <ul className="space-y-2">
+              {[
+                ["Instagram", brand.instagram],
+                ["Facebook", brand.facebook],
+                ["WhatsApp", `https://wa.me/${brand.whatsappNumber}`],
+              ].map(([label, href]) => (
+                <li key={label}>
                   <a
                     href={href}
-                    className="text-background/60 hover:text-primary transition-colors duration-200"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-background/60 hover:text-primary transition-colors duration-200 text-xs"
                   >
                     {label}
                   </a>
@@ -61,20 +119,16 @@ export default function Layout({ children }: LayoutProps) {
               ))}
             </ul>
           </div>
-          <div>
-            <p className="font-inter text-xs tracking-[0.2em] uppercase text-primary mb-4">
-              Contact
-            </p>
-            <address className="not-italic text-background/60 space-y-1.5 text-xs leading-relaxed">
-              <p>{brand.location}</p>
-              <p>{brand.phone}</p>
-              <p>{brand.email}</p>
-            </address>
-          </div>
         </div>
-        <div className="border-t border-background/10 px-6 md:px-12 lg:px-20 py-5 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-background/40">
-          <p>© {new Date().getFullYear()} {brand.brandName}. All rights reserved.</p>
-          <p>Bespoke fashion crafted with love.</p>
+
+        {/* Payment icons row */}
+        <div className="border-t border-background/10 px-6 md:px-12 lg:px-20 py-5 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-background/40">© {new Date().getFullYear()} {brand.brandName}. All rights reserved.</p>
+          <img
+            src="/aurore/footer-payment-support.png"
+            alt="Accepted payment methods"
+            className="h-6 object-contain opacity-60"
+          />
         </div>
       </footer>
 
