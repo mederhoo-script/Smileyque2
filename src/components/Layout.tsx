@@ -150,6 +150,7 @@ export default function Layout({ children }: LayoutProps) {
       <ProductQuickView
         product={quickViewProduct}
         onClose={() => setQuickViewProduct(null)}
+        onNavigate={(p) => setQuickViewProduct(p)}
       />
     </>
   );

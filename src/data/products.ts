@@ -19,10 +19,12 @@ export interface Product {
   id: string;
   name: string;
   description: string;
+  fullDescription?: string; // longer story shown in quick view
   price: string;           // display string e.g. "₦85,000"
   priceValue: number;      // numeric for sorting/filtering
   category: Exclude<ProductCategory, "All">;
   image: string;
+  images?: string[];       // additional gallery images (front, back, side, detail)
   colors?: string[];
   sizes?: string[];
   occasion?: ProductOccasion;
@@ -38,10 +40,17 @@ export const products: Product[] = [
     id: "women-001",
     name: "Royal Silk Gown",
     description: "Floor-length silk gown with hand-embroidered gold detailing. Perfect for black-tie events.",
+    fullDescription: "The Royal Silk Gown is a masterpiece of bespoke craftsmanship. Cut from premium mulberry silk, this floor-length gown features intricate hand-embroidered gold threadwork across the bodice and hem. The structured silhouette flatters every body type, while the built-in corset provides elegant support. Each piece is made-to-measure, taking up to three weeks from consultation to final fitting. A built-in bustle creates subtle drama at the back, making this the ultimate statement gown for black-tie galas, charity events, and milestone celebrations.",
     price: "₦185,000",
     priceValue: 185000,
     category: "Women",
     image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&q=80",
+      "/aurore/aurore-prod-16e.jpg",
+      "/aurore/aurore-prod-15a.jpg",
+      "/aurore/aurore-prod-12d.jpg",
+    ],
     colors: ["Ivory", "Black", "Gold"],
     sizes: ["XS", "S", "M", "L", "XL"],
     occasion: "Formal",
@@ -52,10 +61,17 @@ export const products: Product[] = [
     id: "women-002",
     name: "Cape Drape Gown",
     description: "Flowing cape gown with dramatic drape and asymmetric hemline in rich fabric.",
+    fullDescription: "The Cape Drape Gown redefines modern Nigerian luxury dressing. Constructed from double-layered chiffon, the sweeping cape creates movement with every step. The asymmetric hemline adds a contemporary edge to the classic floor-length silhouette. The fitted bodice is fully boned and bespoke-lined for a flawless custom fit. Available in deep jewel tones, this is the piece for unforgettable evening appearances — from state dinners to international galas.",
     price: "₦145,000",
     priceValue: 145000,
     category: "Women",
     image: "/images/girl/CapeGown.png",
+    images: [
+      "/images/girl/CapeGown.png",
+      "/aurore/aurore-prod-14d.jpg",
+      "/aurore/aurore-prod-14e.jpg",
+      "/aurore/aurore-prod-13b.jpg",
+    ],
     colors: ["Midnight Blue", "Burgundy"],
     sizes: ["S", "M", "L"],
     occasion: "Party",
@@ -65,10 +81,17 @@ export const products: Product[] = [
     id: "women-003",
     name: "Anarkali Evening Gown",
     description: "Delicate Anarkali-inspired gown with bespoke corseted bodice and full sweeping skirt.",
+    fullDescription: "Inspired by the timeless Anarkali silhouette from the Mughal court, this gown fuses South Asian elegance with West African luxury. The corseted bodice features hand-beaded embroidery in gold and crystal, transitioning to a voluminous A-line skirt in premium organza. Each gown takes over 120 hours of hand-embroidery and is fitted through three consultations. Perfect for engagement ceremonies, traditional weddings, and cultural galas.",
     price: "₦220,000",
     priceValue: 220000,
     category: "Women",
     image: "/images/girl/AnarkaliGown.png",
+    images: [
+      "/images/girl/AnarkaliGown.png",
+      "/aurore/aurore-prod-16d.jpg",
+      "/aurore/aurore-prod-15e.jpg",
+      "/aurore/aurore-prod-9e.jpg",
+    ],
     colors: ["Ivory", "Rose Gold"],
     sizes: ["XS", "S", "M", "L"],
     occasion: "Wedding",

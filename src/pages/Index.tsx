@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
@@ -9,34 +9,160 @@ import { Product } from "@/data/products";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ── Horizontal product carousel ──────────────────────────────────────────────
+// ── Aurore-style editorial banner slider (TRENDING section) ──────────────────
+// Matches Aurore's lakit-banner-list carousel: images with title overlay,
+// 2 visible on desktop / 1 on mobile, horizontal swipe supported.
+const TRENDING_BANNERS = [
+  { img: "/aurore/aurore-s2-img-a.jpg", label: "Women's Wear",    link: "/collections" },
+  { img: "/aurore/aurore-s2-img-b.jpg", label: "Men's Fashion",   link: "/collections" },
+  { img: "/aurore/aurore-s2-img-c.jpg", label: "Bridal Couture",  link: "/collections" },
+  { img: "/aurore/aurore-s2-img-d.jpg", label: "Accessories",     link: "/collections" },
+  { img: "/aurore/aurore-s2-img-e.jpg", label: "Shoes & Bags",    link: "/collections" },
+];
+
+function TrendingBannerSlider() {
+  const VISIBLE_DESKTOP = 2;
+  const SWIPE_THRESHOLD = 40;
+  const TOTAL = TRENDING_BANNERS.length;
+  const maxOffset = TOTAL - VISIBLE_DESKTOP;
+
+  const [offset, setOffset] = useState(0);
+  const [dragDelta, setDragDelta] = useState(0);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const touchStartX = useRef(0);
+  const isDragging = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const clamp = (v: number) => Math.max(0, Math.min(maxOffset, v));
+
+  const go = useCallback((dir: 1 | -1) => {
+    setOffset(o => clamp(o + dir));
+    setDragDelta(0);
+  }, [clamp]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    isDragging.current = true;
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    setDragDelta(dx);
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    isDragging.current = false;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > SWIPE_THRESHOLD) go(dx < 0 ? 1 : -1);
+    else setDragDelta(0);
+  };
+
+  const slideWidthPct = isMobile ? 100 : 50;
+  const translateX = `calc(${-offset * slideWidthPct}% + ${dragDelta}px)`;
+
+  return (
+    <div className="relative overflow-hidden" ref={containerRef}
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+      style={{ touchAction: "pan-y" }}>
+      {/* Track */}
+      <div
+        className="flex"
+        style={{
+          transform: `translateX(${translateX})`,
+          transition: isDragging.current ? "none" : "transform 500ms cubic-bezier(0.25,0.46,0.45,0.94)",
+        }}
+      >
+        {TRENDING_BANNERS.map((b, i) => (
+          <Link
+            key={i}
+            to={b.link}
+            className="flex-shrink-0 w-full md:w-1/2 relative overflow-hidden group"
+            draggable={false}
+          >
+            <div className="aspect-[4/3] md:aspect-[3/2] overflow-hidden">
+              <img
+                src={b.img}
+                alt={b.label}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                loading={i < 2 ? "eager" : "lazy"}
+                draggable={false}
+              />
+            </div>
+            {/* Label overlay at bottom */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end p-5">
+              <p className="font-playfair text-xl font-semibold text-white tracking-wide">{b.label}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Prev / Next arrows (desktop) */}
+      {offset > 0 && (
+        <button onClick={() => go(-1)} aria-label="Previous"
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white/90 border border-border hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex">
+          <ChevronLeft size={18} />
+        </button>
+      )}
+      {offset < maxOffset && (
+        <button onClick={() => go(1)} aria-label="Next"
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white/90 border border-border hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex">
+          <ChevronRight size={18} />
+        </button>
+      )}
+
+      {/* Scrollbar (thin line like Aurore) */}
+      <div className="h-[2px] bg-border mt-3 mx-1 relative">
+        <div
+          className="absolute top-0 left-0 h-full bg-foreground transition-all duration-300"
+          style={{ width: `${((offset + VISIBLE_DESKTOP) / TOTAL) * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Horizontal product carousel with touch-swipe ─────────────────────────────
 function ProductCarousel({ items, onQuickView }: { items: Product[]; onQuickView: (p: Product) => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef(0);
+
   const scroll = (dir: "left" | "right") => {
     if (!ref.current) return;
-    ref.current.scrollBy({ left: dir === "left" ? -320 : 320, behavior: "smooth" });
+    ref.current.scrollBy({ left: dir === "left" ? -280 : 280, behavior: "smooth" });
   };
+
+  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 30) scroll(dx < 0 ? "right" : "left");
+  };
+
   return (
     <div className="relative">
-      <button
-        onClick={() => scroll("left")}
-        aria-label="Scroll left"
-        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white border border-border shadow-elegant hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex"
-      >
+      <button onClick={() => scroll("left")} aria-label="Scroll left"
+        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white border border-border shadow-elegant hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex">
         <ChevronLeft size={18} />
       </button>
-      <div ref={ref} className="products-carousel px-1 pb-2">
+      <div
+        ref={ref}
+        className="products-carousel px-1 pb-2"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{ touchAction: "pan-x" }}
+      >
         {items.map((p) => (
-          <div key={p.id} className="flex-shrink-0 w-52 md:w-60">
+          <div key={p.id} className="flex-shrink-0 w-44 sm:w-52 md:w-60">
             <ProductCard product={p} onQuickView={() => onQuickView(p)} />
           </div>
         ))}
       </div>
-      <button
-        onClick={() => scroll("right")}
-        aria-label="Scroll right"
-        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white border border-border shadow-elegant hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex"
-      >
+      <button onClick={() => scroll("right")} aria-label="Scroll right"
+        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-white border border-border shadow-elegant hover:bg-primary hover:text-white transition-all duration-200 hidden md:flex">
         <ChevronRight size={18} />
       </button>
     </div>
@@ -153,10 +279,10 @@ export default function Index() {
         </div>
       </div>
 
-      {/* ── 3. TRENDING SECTION ── */}
+      {/* ── 3. TRENDING SECTION — Aurore editorial banner slider ── */}
       <section className="section-padding bg-background overflow-hidden">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-10">
+          <div className="flex items-end justify-between mb-8">
             <div>
               <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Trending</p>
               <h2 className="font-playfair text-4xl md:text-5xl font-semibold">Shop The Latest Trends</h2>
@@ -165,7 +291,12 @@ export default function Index() {
               View All
             </Link>
           </div>
-          <ProductCarousel items={trending.length > 0 ? trending : products.slice(0, 8)} onQuickView={setQuickViewProduct} />
+          {/* Aurore-style sliding editorial banners */}
+          <TrendingBannerSlider />
+          {/* Products below the banner (4-col grid like Aurore, scrollable on mobile) */}
+          <div className="mt-8">
+            <ProductCarousel items={trending.length > 0 ? trending : products.slice(0, 8)} onQuickView={setQuickViewProduct} />
+          </div>
         </div>
       </section>
 
@@ -414,6 +545,7 @@ export default function Index() {
       <ProductQuickView
         product={quickViewProduct}
         onClose={() => setQuickViewProduct(null)}
+        onNavigate={(p) => setQuickViewProduct(p)}
       />
     </Layout>
   );

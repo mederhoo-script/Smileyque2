@@ -68,7 +68,7 @@ export default function Collections() {
         )}
       </section>
 
-      <ProductQuickView product={quickViewProduct} onClose={() => setQuickViewProduct(null)} />
+      <ProductQuickView product={quickViewProduct} onClose={() => setQuickViewProduct(null)} onNavigate={(p) => setQuickViewProduct(p)} />
     </Layout>
   );
 }
