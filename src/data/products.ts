@@ -642,6 +642,278 @@ export const products: Product[] = [
     occasion: "Traditional",
     isTrending: true,
   },
+
+  // ─── NEW PRODUCTS — using all remaining aurore reference images ────────────
+
+  // s2-img-a + s1-bg-a + pn-a + pn-b
+  {
+    id: "women-019",
+    name: "Draped Editorial Gown",
+    description: "Sweeping draped gown from our editorial campaign — effortlessly dramatic and refined.",
+    price: "₦168,000",
+    priceValue: 168000,
+    category: "Women",
+    image: "/aurore/aurore-s2-img-a.jpg",
+    images: [
+      "/aurore/aurore-s2-img-a.jpg",
+      "/aurore/aurore-s1-bg-a.jpg",
+      "/aurore/aurore-pn-a.jpg",
+      "/aurore/aurore-pn-b.jpg",
+    ],
+    colors: ["Ivory", "Champagne", "Black"],
+    sizes: ["XS", "S", "M", "L"],
+    occasion: "Formal",
+    featured: true,
+    isTrending: true,
+  },
+
+  // s2-img-b + s1-bg-b + pn-c + pn-d
+  {
+    id: "women-020",
+    name: "Contemporary Draped Silhouette",
+    description: "Bold contemporary silhouette with architectural draping — a showstopper for every event.",
+    price: "₦142,000",
+    priceValue: 142000,
+    originalPrice: "₦175,000",
+    originalPriceValue: 175000,
+    category: "Women",
+    image: "/aurore/aurore-s2-img-b.jpg",
+    images: [
+      "/aurore/aurore-s2-img-b.jpg",
+      "/aurore/aurore-s1-bg-b.jpg",
+      "/aurore/aurore-pn-c.jpg",
+      "/aurore/aurore-pn-d.jpg",
+    ],
+    colors: ["Slate Blue", "Midnight", "Terracotta"],
+    sizes: ["S", "M", "L", "XL"],
+    occasion: "Party",
+    isNew: true,
+    isTrending: true,
+  },
+
+  // s2-img-c + s1-bg-c + pn-e + pn-f — Bridal
+  {
+    id: "bridal-008",
+    name: "Couture Bridal Statement Gown",
+    description: "Statement bridal gown with bespoke beadwork and a breathtaking cathedral train.",
+    price: "From ₦620,000",
+    priceValue: 620000,
+    category: "Bridal",
+    image: "/aurore/aurore-s2-img-c.jpg",
+    images: [
+      "/aurore/aurore-s2-img-c.jpg",
+      "/aurore/aurore-s1-bg-c.jpg",
+      "/aurore/aurore-pn-e.jpg",
+      "/aurore/aurore-pn-f.jpg",
+    ],
+    colors: ["Ivory", "White", "Pearl"],
+    sizes: ["Custom"],
+    occasion: "Wedding",
+    featured: true,
+    isNew: true,
+  },
+
+  // s2-img-d + pn-a (reused as gallery) + mm-a + mm-b — Accessories
+  {
+    id: "acc-003",
+    name: "Luxury Jewellery Set",
+    description: "Curated luxury jewellery set — necklace, earrings and bracelet in gold-plated brass.",
+    price: "₦48,000",
+    priceValue: 48000,
+    category: "Accessories",
+    image: "/aurore/aurore-s2-img-d.jpg",
+    images: [
+      "/aurore/aurore-s2-img-d.jpg",
+      "/aurore/aurore-mm-a.jpg",
+      "/aurore/aurore-mm-b.jpg",
+    ],
+    colors: ["Gold", "Silver", "Rose Gold"],
+    sizes: ["One Size"],
+    occasion: "Formal",
+    isNew: true,
+    isTrending: true,
+  },
+
+  // s2-img-e + mm-c + mm-d — Shoes
+  {
+    id: "shoe-003",
+    name: "Designer Platform Boots",
+    description: "Elevated platform boots with suede finish — power dressing for every season.",
+    price: "₦52,000",
+    priceValue: 52000,
+    originalPrice: "₦65,000",
+    originalPriceValue: 65000,
+    category: "Shoes",
+    image: "/aurore/aurore-s2-img-e.jpg",
+    images: [
+      "/aurore/aurore-s2-img-e.jpg",
+      "/aurore/aurore-mm-c.jpg",
+      "/aurore/aurore-mm-d.jpg",
+    ],
+    colors: ["Black", "Brown", "Tan"],
+    sizes: ["36", "37", "38", "39", "40", "41"],
+    occasion: "Casual",
+    isTrending: true,
+  },
+
+  // s3-img-a + tt-a + s7-img-a — Women
+  {
+    id: "women-021",
+    name: "Signature Wrap Dress",
+    description: "Our signature wrap dress — cut from heavyweight crepe for a flawless, structured drape.",
+    price: "₦88,000",
+    priceValue: 88000,
+    category: "Women",
+    image: "/aurore/aurore-s3-img-a.jpg",
+    images: [
+      "/aurore/aurore-s3-img-a.jpg",
+      "/aurore/aurore-tt-a.jpg",
+      "/aurore/aurore-s7-img-a.jpg",
+    ],
+    colors: ["Forest Green", "Burgundy", "Black"],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    occasion: "Casual",
+    featured: true,
+  },
+
+  // s3-img-b + tt-b + s7-img-b — Men
+  {
+    id: "men-007",
+    name: "Premium Linen Senator Set",
+    description: "Premium-weight linen senator set with contrast embroidery — smart, breathable and regal.",
+    price: "₦87,000",
+    priceValue: 87000,
+    category: "Men",
+    image: "/aurore/aurore-s3-img-b.jpg",
+    images: [
+      "/aurore/aurore-s3-img-b.jpg",
+      "/aurore/aurore-tt-b.jpg",
+      "/aurore/aurore-s7-img-b.jpg",
+    ],
+    colors: ["White", "Navy", "Ash"],
+    sizes: ["S", "M", "L", "XL", "XXL"],
+    occasion: "Formal",
+    featured: true,
+    isNew: true,
+  },
+
+  // s3-img-c + s7-img-c — Bags
+  {
+    id: "bag-004",
+    name: "Structured Leather Handbag",
+    description: "Impeccably structured handbag in genuine leather with polished gold-tone hardware.",
+    price: "₦62,000",
+    priceValue: 62000,
+    category: "Bags",
+    image: "/aurore/aurore-s3-img-c.jpg",
+    images: [
+      "/aurore/aurore-s3-img-c.jpg",
+      "/aurore/aurore-s7-img-c.jpg",
+    ],
+    colors: ["Camel", "Black", "Burgundy"],
+    sizes: ["One Size"],
+    occasion: "Formal",
+    isTrending: true,
+    isNew: true,
+  },
+
+  // s3-img-d + s7-img-d — Shoes
+  {
+    id: "shoe-004",
+    name: "Pointed-Toe Stiletto Heels",
+    description: "Sleek pointed-toe stilettos in soft leather — the ultimate power-heel for every occasion.",
+    price: "₦45,000",
+    priceValue: 45000,
+    category: "Shoes",
+    image: "/aurore/aurore-s3-img-d.jpg",
+    images: [
+      "/aurore/aurore-s3-img-d.jpg",
+      "/aurore/aurore-s7-img-d.jpg",
+    ],
+    colors: ["Nude", "Black", "Red"],
+    sizes: ["36", "37", "38", "39", "40", "41"],
+    occasion: "Formal",
+    featured: true,
+  },
+
+  // s3-img-e + s9-img-a — Bridal
+  {
+    id: "bridal-009",
+    name: "Mermaid Bridal Silhouette",
+    description: "Fitted mermaid-cut bridal gown with sweetheart neckline and flare from the knee.",
+    price: "From ₦450,000",
+    priceValue: 450000,
+    category: "Bridal",
+    image: "/aurore/aurore-s3-img-e.jpg",
+    images: [
+      "/aurore/aurore-s3-img-e.jpg",
+      "/aurore/aurore-s9-img-a.jpg",
+    ],
+    colors: ["Ivory", "Blush"],
+    sizes: ["Custom"],
+    occasion: "Wedding",
+    featured: true,
+    isNew: true,
+  },
+
+  // s3-img-f + s9-img-b — Accessories
+  {
+    id: "acc-004",
+    name: "Beaded Statement Necklace",
+    description: "Hand-strung beaded statement necklace in vibrant mixed-tones — pairs with any outfit.",
+    price: "₦22,000",
+    priceValue: 22000,
+    category: "Accessories",
+    image: "/aurore/aurore-s3-img-f.jpg",
+    images: [
+      "/aurore/aurore-s3-img-f.jpg",
+      "/aurore/aurore-s9-img-b.jpg",
+    ],
+    colors: ["Gold", "Multicolor"],
+    sizes: ["One Size"],
+    occasion: "Any",
+    isTrending: true,
+  },
+
+  // s4-img-a + s9-img-c — Women editorial
+  {
+    id: "women-022",
+    name: "The Essence — Feminine Edit",
+    description: "From the Essence editorial line — soft draping with structured tailoring in premium fabric.",
+    price: "₦195,000",
+    priceValue: 195000,
+    category: "Women",
+    image: "/aurore/aurore-s4-img-a.jpg",
+    images: [
+      "/aurore/aurore-s4-img-a.jpg",
+      "/aurore/aurore-s9-img-c.jpg",
+    ],
+    colors: ["Ivory", "Blush", "Ecru"],
+    sizes: ["XS", "S", "M", "L"],
+    occasion: "Formal",
+    featured: true,
+    isNew: true,
+  },
+
+  // s4-img-b — Women editorial
+  {
+    id: "women-023",
+    name: "The Essence — Power Silhouette",
+    description: "From the Essence editorial line — commanding structured shoulders with a cinched waist.",
+    price: "₦188,000",
+    priceValue: 188000,
+    category: "Women",
+    image: "/aurore/aurore-s4-img-b.jpg",
+    images: [
+      "/aurore/aurore-s4-img-b.jpg",
+      "/aurore/aurore-s4-img-a.jpg",
+    ],
+    colors: ["Black", "Midnight Blue", "Charcoal"],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    occasion: "Formal",
+    featured: true,
+    isTrending: true,
+  },
 ];
 
 export const categories: ProductCategory[] = [
