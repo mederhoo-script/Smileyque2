@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -57,6 +57,10 @@ export default function HeroCarousel() {
     const [isAnimating, setIsAnimating] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
 
+    // Touch/swipe tracking
+    const touchStartX = useRef<number | null>(null);
+    const touchStartY = useRef<number | null>(null);
+
     const goTo = useCallback(
         (index: number) => {
             if (isAnimating) return;
@@ -85,6 +89,27 @@ export default function HeroCarousel() {
         return () => window.removeEventListener("keydown", handler);
     }, [next, prev]);
 
+    // Touch handlers for mobile swipe
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        setIsPaused(true);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null || touchStartY.current === null) return;
+        const dx = e.changedTouches[0].clientX - touchStartX.current;
+        const dy = e.changedTouches[0].clientY - touchStartY.current;
+        // Only trigger if horizontal swipe is dominant
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+            if (dx < 0) next();
+            else prev();
+        }
+        touchStartX.current = null;
+        touchStartY.current = null;
+        setIsPaused(false);
+    };
+
     const slide = slides[current];
 
     return (
@@ -92,6 +117,8 @@ export default function HeroCarousel() {
             className="relative flex h-screen min-h-[600px] overflow-hidden"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
         >
             {/* ── LEFT PANEL (65%) ── */}
             <div className="relative w-full md:w-[65%] h-full overflow-hidden">

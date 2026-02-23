@@ -1,11 +1,14 @@
 import { useState } from "react";
 import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
+import ProductQuickView from "@/components/ProductQuickView";
 import { products, categories, ProductCategory } from "@/data/products";
+import { Product } from "@/data/products";
 import { cn } from "@/lib/utils";
 
 export default function Collections() {
   const [activeCategory, setActiveCategory] = useState<ProductCategory>("All");
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
   const filtered =
     activeCategory === "All"
@@ -59,11 +62,13 @@ export default function Collections() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
             {filtered.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} onQuickView={() => setQuickViewProduct(product)} />
             ))}
           </div>
         )}
       </section>
+
+      <ProductQuickView product={quickViewProduct} onClose={() => setQuickViewProduct(null)} />
     </Layout>
   );
 }
