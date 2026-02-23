@@ -4,33 +4,11 @@ import { Product } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
 import { buildWhatsAppOrderUrl } from "@/config/brand";
+import { getSwatchColor } from "@/lib/colorMap";
 
 interface ProductQuickViewProps {
     product: Product | null;
     onClose: () => void;
-}
-
-// Color name → CSS color
-const COLOR_MAP: Record<string, string> = {
-    ivory: "#FFFFF0", black: "#1a1a1a", white: "#FFFFFF", gold: "#C9A96E",
-    navy: "#1B2A4A", red: "#C0392B", blue: "#2980B9", green: "#27AE60",
-    pink: "#E91E8C", purple: "#8E44AD", brown: "#795548", beige: "#F5F0E8",
-    cream: "#FFFDD0", silver: "#B2BEB5", grey: "#9E9E9E", gray: "#9E9E9E",
-    orange: "#E67E22", yellow: "#F1C40F", turquoise: "#1ABC9C",
-    burgundy: "#800020", maroon: "#800000", coral: "#FF6B6B",
-    "rose gold": "#B76E79", rose: "#E8B4B8", "midnight blue": "#191970",
-    midnight: "#191970", sand: "#C2B280", wine: "#722F37",
-    champagne: "#F7E7CE", olive: "#808000", charcoal: "#36454F",
-    teal: "#008080", peach: "#FFCBA4", lilac: "#C8A2C8",
-    emerald: "#50C878", cobalt: "#0047AB", mustard: "#FFDB58",
-};
-
-function getSwatchColor(name: string): string {
-    const lower = name.toLowerCase();
-    for (const [key, val] of Object.entries(COLOR_MAP)) {
-        if (lower.includes(key)) return val;
-    }
-    return "#D4AF37";
 }
 
 export default function ProductQuickView({ product, onClose }: ProductQuickViewProps) {
@@ -136,7 +114,7 @@ export default function ProductQuickView({ product, onClose }: ProductQuickViewP
                         {[1,2,3,4,5].map((s) => (
                             <Star key={s} size={13} className="fill-primary text-primary" />
                         ))}
-                        <span className="font-inter text-[11px] text-muted-foreground ml-1">(12 reviews)</span>
+                        
                     </div>
 
                     {/* Price */}

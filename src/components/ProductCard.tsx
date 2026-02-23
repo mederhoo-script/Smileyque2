@@ -1,60 +1,12 @@
 import { Heart, ArrowLeftRight, Eye } from "lucide-react";
 import { Product } from "@/data/products";
 import { cn } from "@/lib/utils";
+import { getSwatchColor } from "@/lib/colorMap";
 
 interface ProductCardProps {
   product: Product;
   className?: string;
   onQuickView?: () => void;
-}
-
-// Map color names to approximate CSS colors for swatches
-const COLOR_MAP: Record<string, string> = {
-  "ivory": "#FFFFF0",
-  "black": "#1a1a1a",
-  "white": "#FFFFFF",
-  "gold": "#C9A96E",
-  "navy": "#1B2A4A",
-  "red": "#C0392B",
-  "blue": "#2980B9",
-  "green": "#27AE60",
-  "pink": "#E91E8C",
-  "purple": "#8E44AD",
-  "brown": "#795548",
-  "beige": "#F5F0E8",
-  "cream": "#FFFDD0",
-  "silver": "#B2BEB5",
-  "grey": "#9E9E9E",
-  "gray": "#9E9E9E",
-  "orange": "#E67E22",
-  "yellow": "#F1C40F",
-  "turquoise": "#1ABC9C",
-  "burgundy": "#800020",
-  "maroon": "#800000",
-  "coral": "#FF6B6B",
-  "rose gold": "#B76E79",
-  "rose": "#E8B4B8",
-  "midnight blue": "#191970",
-  "midnight": "#191970",
-  "sand": "#C2B280",
-  "wine": "#722F37",
-  "champagne": "#F7E7CE",
-  "olive": "#808000",
-  "charcoal": "#36454F",
-  "teal": "#008080",
-  "peach": "#FFCBA4",
-  "lilac": "#C8A2C8",
-  "emerald": "#50C878",
-  "cobalt": "#0047AB",
-  "mustard": "#FFDB58",
-};
-
-function getSwatchColor(name: string): string {
-  const lower = name.toLowerCase();
-  for (const [key, val] of Object.entries(COLOR_MAP)) {
-    if (lower.includes(key)) return val;
-  }
-  return "#D4AF37";
 }
 
 export default function ProductCard({ product, className, onQuickView }: ProductCardProps) {
@@ -143,17 +95,19 @@ export default function ProductCard({ product, className, onQuickView }: Product
 
         {/* Color swatches */}
         {product.colors && product.colors.length > 0 && (
-          <div className="flex items-center gap-1 mt-0.5">
+          <div className="flex items-center gap-1 mt-0.5" role="list" aria-label="Available colours">
             {product.colors.slice(0, 5).map((color) => (
               <span
                 key={color}
+                role="listitem"
+                aria-label={color}
                 title={color}
                 className="w-3.5 h-3.5 rounded-full border border-border flex-shrink-0 cursor-default"
                 style={{ backgroundColor: getSwatchColor(color) }}
               />
             ))}
             {product.colors.length > 5 && (
-              <span className="font-inter text-[9px] text-muted-foreground">
+              <span className="font-inter text-[9px] text-muted-foreground" aria-label={`${product.colors.length - 5} more colours`}>
                 +{product.colors.length - 5}
               </span>
             )}
