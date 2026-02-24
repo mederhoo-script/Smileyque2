@@ -1,12 +1,8 @@
 /**
- * HeroCarousel — Aurore-style split-screen hero slider
+ * HeroCarousel — full-width hero slider
  *
  * Uses CSS transform: translateX() (Swiper "slide" effect) so slides
  * physically move horizontally, both during auto-play and live finger drag.
- *
- * Layout:
- *   Mobile  : full-width left panel, right panel hidden
- *   Desktop : left 65% (image + text + CTAs) | right 35% (4 mini-product cards)
  *
  * Touch behaviour:
  *   onTouchMove → slides follow the finger in real-time
@@ -18,18 +14,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-interface MiniProduct {
-  image: string;
-  name: string;
-  price: string;
-}
-
 interface Slide {
   bg: string;
   tag: string;
   title: string;
   subtitle: string;
-  miniProducts: MiniProduct[];
 }
 
 const slides: Slide[] = [
@@ -38,36 +27,18 @@ const slides: Slide[] = [
     tag: "New Arrivals",
     title: "Wear Your Story",
     subtitle: "Bespoke luxury fashion crafted for extraordinary moments",
-    miniProducts: [
-      { image: "/images/girl/AnarkaliGown.png", name: "Anarkali Evening Gown", price: "₦220,000" },
-      { image: "/images/men/fashion10.jpg", name: "Senator Agbada Set", price: "₦95,000" },
-      { image: "/images/bags/fashion.jpg", name: "Luxury Tote Bag", price: "₦38,000" },
-      { image: "/images/shoes/fashion10.jpg", name: "Strappy Heeled Sandal", price: "₦28,000" },
-    ],
   },
   {
     bg: "/aurore/aurore-s1-bg-b.jpg",
     tag: "Trending Now",
     title: "Cape Collection",
     subtitle: "Dramatic silhouettes that command every room you enter",
-    miniProducts: [
-      { image: "/images/girl/CapeGown.png", name: "Cape Drape Gown", price: "₦145,000" },
-      { image: "/images/men/fashion27.jpg", name: "Linen Kaftan Set", price: "₦75,000" },
-      { image: "/images/bags/faahion30.jpg", name: "Evening Clutch", price: "₦22,000" },
-      { image: "/images/shoes/fashion27.jpg", name: "Block Heel Mule", price: "₦32,000" },
-    ],
   },
   {
     bg: "/aurore/aurore-s1-bg-c.jpg",
     tag: "Bridal 2026",
     title: "Your Perfect Day",
     subtitle: "Fully bespoke bridal creations tailored to your vision",
-    miniProducts: [
-      { image: "/images/girl/4d65e36a-cbb1-44cd-80f1-16a19c5dafc5.jpeg", name: "Bridal Ball Gown", price: "₦350,000" },
-      { image: "/images/men/fashion6.jpg", name: "Groom's Agbada", price: "₦120,000" },
-      { image: "/images/bags/0fd0dea2-1481-4524-9d52-cbaf9d8b1c06.jpeg", name: "Bridal Handbag", price: "₦55,000" },
-      { image: "/images/shoes/fashion6.jpg", name: "Bridal Court Shoe", price: "₦42,000" },
-    ],
   },
 ];
 
@@ -196,10 +167,10 @@ export default function HeroCarousel() {
       onMouseEnter={stopAuto}
       onMouseLeave={startAuto}
     >
-      {/* ═══════════════ LEFT PANEL (full width mobile / 65% desktop) ═════════════ */}
+      {/* ═══════════════ HERO PANEL (full width) ═══════════════════════════ */}
       <div
         ref={containerRef}
-        className="relative w-full md:w-[65%] h-full overflow-hidden"
+        className="relative w-full h-full overflow-hidden"
         style={{ touchAction: "pan-y" }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -312,49 +283,6 @@ export default function HeroCarousel() {
         </div>
       </div>
 
-      {/* ═══════════════ RIGHT PANEL (35%, desktop only) ════════════════════ */}
-      <div className="hidden md:flex md:w-[35%] h-full bg-white flex-col border-l border-gray-100">
-        {/* Product mini-cards */}
-        <div className="flex-1 flex flex-col divide-y divide-gray-100 overflow-hidden">
-          {slide.miniProducts.map((p, i) => (
-            <Link
-              key={`${current}-${i}`}
-              to="/collections"
-              className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors duration-200 group flex-1"
-            >
-              <div className="w-14 h-[72px] flex-shrink-0 overflow-hidden bg-gray-100">
-                <img
-                  src={p.image}
-                  alt={p.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                  onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
-                  draggable={false}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-playfair text-[13px] font-medium text-gray-900 leading-snug line-clamp-2">
-                  {p.name}
-                </p>
-                <p className="font-inter text-xs text-primary mt-1 font-semibold">
-                  {p.price}
-                </p>
-              </div>
-              <ChevronRight size={13} className="text-gray-300 flex-shrink-0 group-hover:text-primary transition-colors duration-200" />
-            </Link>
-          ))}
-        </div>
-
-        {/* "View All" footer link */}
-        <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0">
-          <Link
-            to="/collections"
-            className="block text-center font-inter text-[10px] tracking-[0.3em] uppercase border border-gray-900 text-gray-900 py-3 hover:bg-gray-900 hover:text-white transition-all duration-300"
-          >
-            View All Collections
-          </Link>
-        </div>
-      </div>
     </section>
   );
 }
