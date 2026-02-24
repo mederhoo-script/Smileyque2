@@ -26,7 +26,6 @@ export default function Layout({ children }: LayoutProps) {
           {/* Col 1: About + Newsletter */}
           <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <img src={brand.logo} alt={brand.brandName} className="h-10 w-auto" />
               <p className="font-playfair text-2xl text-background font-semibold tracking-wider">
                 {brand.brandName}
               </p>

@@ -57,11 +57,6 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
               isTransparent ? "text-background" : "text-foreground"
             )}
           >
-            <img
-              src={brand.logo}
-              alt={brand.brandName}
-              className="h-8 md:h-10 w-auto transition-all duration-300"
-            />
             <span>{brand.brandName}</span>
           </Link>
 
@@ -148,11 +143,6 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
           className="flex flex-col items-center gap-4 font-playfair text-3xl text-background tracking-widest"
           onClick={() => setMenuOpen(false)}
         >
-          <img
-            src={brand.logo}
-            alt={brand.brandName}
-            className="h-16 w-auto"
-          />
           <span>{brand.brandName}</span>
         </Link>
         <ul className="flex flex-col items-center gap-8">
