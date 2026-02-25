@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { products, categories, Product, ProductCategory, ProductOccasion } from "@/data/products";
+import { addProduct, getProducts, deleteProduct } from "@/lib/productsService";
 import { brand } from "@/config/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,36 @@ const NAV_ITEMS: { id: Section; label: string; iconPath: string }[] = [
   { id: "config", label: "Brand Config", iconPath: ICONS.config },
 ];
 
-// ── Stat card ─────────────────────────────────────────────────────────────────
+// ── Firestore products hook ───────────────────────────────────────────────────
+function useFirestoreProducts() {
+  const [fsProducts, setFsProducts] = useState<Product[]>([]);
+  const [fsLoading, setFsLoading] = useState(true);
+  const [fsError, setFsError] = useState<string | null>(null);
+
+  const fetch = useCallback(async () => {
+    setFsLoading(true);
+    setFsError(null);
+    try {
+      const data = await getProducts();
+      setFsProducts(data);
+    } catch (e) {
+      setFsError((e as Error).message ?? "Failed to load products from Firestore.");
+    } finally {
+      setFsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  const remove = useCallback(async (id: string): Promise<void> => {
+    await deleteProduct(id);
+    await fetch();
+  }, [fetch]);
+
+  return { fsProducts, fsLoading, fsError, refetch: fetch, remove };
+}
+
+
 function StatCard({
   label,
   value,
@@ -95,6 +125,7 @@ function StatCard({
 
 // ── Dashboard overview section ────────────────────────────────────────────────
 function DashboardSection() {
+  const { fsProducts, fsLoading } = useFirestoreProducts();
   const totalProducts = products.length;
   const featured = products.filter((p) => p.featured).length;
   const isNew = products.filter((p) => p.isNew).length;
@@ -122,7 +153,7 @@ function DashboardSection() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="Total Products" value={totalProducts} iconPath={ICONS.products} accent />
-        <StatCard label="Categories" value={totalCategories} iconPath={ICONS.tag} />
+        <StatCard label="Saved to DB" value={fsLoading ? "…" : fsProducts.length} iconPath={ICONS.tag} accent />
         <StatCard label="Featured" value={featured} iconPath={ICONS.star} />
         <StatCard label="New Arrivals" value={isNew} iconPath={ICONS.new} />
         <StatCard label="Trending" value={trending} iconPath={ICONS.trending} />
@@ -181,6 +212,9 @@ function ProductsSection() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [occasionFilter, setOccasionFilter] = useState<string>("All");
+  const { fsProducts, fsLoading, fsError, remove } = useFirestoreProducts();
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const occasions = useMemo(() => {
     const set = new Set(products.map((p) => p.occasion).filter(Boolean) as string[]);
@@ -350,6 +384,100 @@ function ProductsSection() {
           </Table>
         </div>
       </div>
+
+      {/* ── Firestore Products ─────────────────────────────────────────── */}
+      <div>
+        <h3 className="font-playfair text-xl font-semibold mt-10 mb-4">
+          Firestore Catalog
+          {!fsLoading && (
+            <span className="ml-2 font-inter text-sm text-muted-foreground font-normal">
+              ({fsProducts.length} product{fsProducts.length !== 1 ? "s" : ""})
+            </span>
+          )}
+        </h3>
+
+        {fsLoading && (
+          <p className="text-sm text-muted-foreground font-inter">Loading from Firestore…</p>
+        )}
+        {fsError && (
+          <p className="text-sm text-destructive font-inter">Error: {fsError}</p>
+        )}
+        {!fsLoading && !fsError && fsProducts.length === 0 && (
+          <p className="text-sm text-muted-foreground font-inter">
+            No products saved to Firestore yet. Use &ldquo;Add Product&rdquo; to create one.
+          </p>
+        )}
+        {!fsLoading && fsProducts.length > 0 && (
+          <div className="rounded-lg border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="font-inter text-xs tracking-wide uppercase w-16">Image</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">ID</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Name</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Category</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Price</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase w-24">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {fsProducts.map((p) => (
+                    <TableRow key={p.id} className="hover:bg-muted/30">
+                      <TableCell>
+                        <img
+                          src={p.image}
+                          alt={p.name}
+                          className="w-10 h-10 object-cover rounded-md bg-muted"
+                        />
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                        {p.id}
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-inter text-sm font-medium">{p.name}</p>
+                        <p className="font-inter text-xs text-muted-foreground line-clamp-1 max-w-xs">
+                          {p.description}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-inter text-xs whitespace-nowrap">
+                          {p.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-inter text-sm font-medium text-primary whitespace-nowrap">
+                        {p.price}
+                      </TableCell>
+                      <TableCell>
+                        {deleteError && deleting === p.id && (
+                          <p className="text-xs text-destructive mb-1">{deleteError}</p>
+                        )}
+                        <button
+                          onClick={async () => {
+                            setDeleting(p.id);
+                            setDeleteError(null);
+                            try {
+                              await remove(p.id);
+                            } catch (err) {
+                              setDeleteError((err as Error).message ?? "Delete failed.");
+                            } finally {
+                              setDeleting(null);
+                            }
+                          }}
+                          disabled={deleting === p.id}
+                          className="font-inter text-xs text-destructive hover:underline disabled:opacity-50"
+                        >
+                          {deleting === p.id ? "Deleting…" : "Delete"}
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -359,7 +487,9 @@ const OCCASION_OPTIONS: ProductOccasion[] = ["Formal", "Wedding", "Casual", "Par
 const CATEGORY_OPTIONS = categories.filter((c) => c !== "All") as Exclude<ProductCategory, "All">[];
 
 function AddProductSection() {
-  const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -381,12 +511,53 @@ function AddProductSection() {
 
   function handleChange(field: keyof typeof form, value: string | boolean) {
     setForm((prev) => ({ ...prev, [field]: value }));
-    setSubmitted(false);
+    setSaveError(null);
+    setSavedId(null);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitted(true);
+    setSaving(true);
+    setSaveError(null);
+    setSavedId(null);
+    try {
+      const priceNum = parseInt(form.price.replace(/\D/g, ""), 10) || 0;
+      const origPriceNum = form.originalPrice
+        ? parseInt(form.originalPrice.replace(/\D/g, ""), 10) || 0
+        : undefined;
+
+      const productData: Omit<Product, "id"> = {
+        name: form.name,
+        description: form.description,
+        ...(form.fullDescription ? { fullDescription: form.fullDescription } : {}),
+        price: form.price,
+        priceValue: priceNum,
+        ...(form.originalPrice ? { originalPrice: form.originalPrice } : {}),
+        ...(origPriceNum !== undefined ? { originalPriceValue: origPriceNum } : {}),
+        category: form.category as Exclude<ProductCategory, "All">,
+        ...(form.occasion ? { occasion: form.occasion as ProductOccasion } : {}),
+        image: form.image,
+        images: {
+          ...(form.image ? { front: form.image } : {}),
+          ...(form.imageLeft ? { left: form.imageLeft } : {}),
+          ...(form.imageRight ? { right: form.imageRight } : {}),
+          ...(form.imageBack ? { back: form.imageBack } : {}),
+        },
+        ...(form.colors ? { colors: form.colors.split(",").map((c) => c.trim()).filter(Boolean) } : {}),
+        ...(form.sizes ? { sizes: form.sizes.split(",").map((s) => s.trim()).filter(Boolean) } : {}),
+        ...(form.featured ? { featured: true } : {}),
+        ...(form.isNew ? { isNew: true } : {}),
+        ...(form.isTrending ? { isTrending: true } : {}),
+      };
+
+      const id = await addProduct(productData);
+      setSavedId(id);
+      handleReset();
+    } catch (err) {
+      setSaveError((err as Error).message ?? "Failed to save product.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleReset() {
@@ -408,7 +579,8 @@ function AddProductSection() {
       isNew: false,
       isTrending: false,
     });
-    setSubmitted(false);
+    setSaveError(null);
+    setSavedId(null);
   }
 
   return (
@@ -638,14 +810,25 @@ function AddProductSection() {
           </CardContent>
         </Card>
 
+        {/* Error banner */}
+        {saveError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-4 flex items-start gap-3">
+            <Icon path="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-inter font-medium text-red-800">Failed to save product</p>
+              <p className="text-xs font-inter text-red-700 mt-0.5">{saveError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Success banner */}
-        {submitted && (
+        {savedId && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 flex items-start gap-3">
             <Icon path="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-inter font-medium text-emerald-800">Product saved (placeholder)</p>
+              <p className="text-sm font-inter font-medium text-emerald-800">Product saved to Firestore</p>
               <p className="text-xs font-inter text-emerald-700 mt-0.5">
-                This is a UI placeholder — backend persistence is not yet wired up. To permanently add a product, append it to <code className="bg-emerald-100 px-1 rounded">src/data/products.ts</code>.
+                Document ID: <code className="bg-emerald-100 px-1 rounded">{savedId}</code>
               </p>
             </div>
           </div>
@@ -653,11 +836,11 @@ function AddProductSection() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <Button type="submit" className="font-inter text-sm">
+          <Button type="submit" disabled={saving} className="font-inter text-sm">
             <Icon path={ICONS.plus} className="w-4 h-4" />
-            Save Product
+            {saving ? "Saving…" : "Save Product"}
           </Button>
-          <Button type="button" variant="outline" className="font-inter text-sm" onClick={handleReset}>
+          <Button type="button" variant="outline" className="font-inter text-sm" onClick={handleReset} disabled={saving}>
             Clear Form
           </Button>
         </div>
@@ -860,7 +1043,7 @@ export default function Admin() {
         {/* Footer */}
         <div className="px-6 py-5 border-t border-white/10">
           <p className="text-[10px] font-inter text-white/30 tracking-wide">
-            Read-only · No CRUD
+            Firebase · Firestore CRUD
           </p>
         </div>
       </aside>
@@ -889,9 +1072,9 @@ export default function Admin() {
             <span className="text-foreground font-medium capitalize">{activeSection}</span>
           </div>
 
-          {/* Read-only badge */}
+          {/* Firebase badge */}
           <Badge variant="outline" className="font-inter text-xs hidden sm:flex">
-            Read-only
+            Firebase
           </Badge>
         </header>
 
