@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { products, categories, Product, ProductCategory, ProductOccasion } from "@/data/products";
-import { addProduct, getProducts, deleteProduct, uploadProductImage } from "@/lib/productsService";
+import { addProduct, getProducts, deleteProduct, updateProduct, uploadProductImage } from "@/lib/productsService";
 import { brand } from "@/config/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -208,7 +208,7 @@ function DashboardSection() {
 }
 
 // ── Products section ──────────────────────────────────────────────────────────
-function ProductsSection() {
+function ProductsSection({ onEdit }: { onEdit: (p: Product) => void }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [occasionFilter, setOccasionFilter] = useState<string>("All");
@@ -452,23 +452,32 @@ function ProductsSection() {
                         {deleteError && deleting === p.id && (
                           <p className="text-xs text-destructive mb-1">{deleteError}</p>
                         )}
-                        <button
-                          onClick={async () => {
-                            setDeleting(p.id);
-                            setDeleteError(null);
-                            try {
-                              await remove(p.id);
-                            } catch (err) {
-                              setDeleteError((err as Error).message ?? "Delete failed.");
-                            } finally {
-                              setDeleting(null);
-                            }
-                          }}
-                          disabled={deleting === p.id}
-                          className="font-inter text-xs text-destructive hover:underline disabled:opacity-50"
-                        >
-                          {deleting === p.id ? "Deleting…" : "Delete"}
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => onEdit(p)}
+                            className="font-inter text-xs text-primary hover:underline"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+                              setDeleting(p.id);
+                              setDeleteError(null);
+                              try {
+                                await remove(p.id);
+                              } catch (err) {
+                                setDeleteError((err as Error).message ?? "Delete failed.");
+                              } finally {
+                                setDeleting(null);
+                              }
+                            }}
+                            disabled={deleting === p.id}
+                            className="font-inter text-xs text-destructive hover:underline disabled:opacity-50"
+                          >
+                            {deleting === p.id ? "Deleting…" : "Delete"}
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -688,12 +697,19 @@ interface ImageSlotState {
   file: File | null;
 }
 
-const EMPTY_IMAGE_SLOT: ImageSlotState = { mode: "url", url: "", file: null };
+const EMPTY_IMAGE_SLOT: ImageSlotState = { mode: "upload", url: "", file: null };
 
-function AddProductSection() {
+function AddProductSection({
+  editProduct = null,
+  onEditDone,
+}: {
+  editProduct?: Product | null;
+  onEditDone?: () => void;
+}) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [savedId, setSavedId] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);   // add mode: Firestore doc ID
+  const [saveUpdated, setSaveUpdated] = useState(false);         // edit mode: success flag
   const [uploadingView, setUploadingView] = useState<ImageView | null>(null);
 
   // Text / select fields
@@ -721,6 +737,68 @@ function AddProductSection() {
     right: { ...EMPTY_IMAGE_SLOT },
     back: { ...EMPTY_IMAGE_SLOT },
   });
+
+  // Populate form when editing an existing product; reset when returning to add mode
+  useEffect(() => {
+    if (editProduct) {
+      setForm({
+        name: editProduct.name,
+        description: editProduct.description,
+        fullDescription: editProduct.fullDescription ?? "",
+        price: editProduct.price,
+        originalPrice: editProduct.originalPrice ?? "",
+        category: editProduct.category,
+        occasion: editProduct.occasion ?? "",
+        featured: editProduct.featured ?? false,
+        isNew: editProduct.isNew ?? false,
+        isTrending: editProduct.isTrending ?? false,
+      });
+      setColors(editProduct.colors ?? []);
+      setSizes(editProduct.sizes ?? []);
+      setImageSlots({
+        front: editProduct.image
+          ? { mode: "url", url: editProduct.image, file: null }
+          : { ...EMPTY_IMAGE_SLOT },
+        left: editProduct.images?.left
+          ? { mode: "url", url: editProduct.images.left, file: null }
+          : { ...EMPTY_IMAGE_SLOT },
+        right: editProduct.images?.right
+          ? { mode: "url", url: editProduct.images.right, file: null }
+          : { ...EMPTY_IMAGE_SLOT },
+        back: editProduct.images?.back
+          ? { mode: "url", url: editProduct.images.back, file: null }
+          : { ...EMPTY_IMAGE_SLOT },
+      });
+      setSaveError(null);
+      setSavedId(null);
+      setSaveUpdated(false);
+    } else {
+      // Switching back to add mode — clear the form
+      setForm({
+        name: "",
+        description: "",
+        fullDescription: "",
+        price: "",
+        originalPrice: "",
+        category: "",
+        occasion: "",
+        featured: false,
+        isNew: false,
+        isTrending: false,
+      });
+      setColors([]);
+      setSizes([]);
+      setImageSlots({
+        front: { ...EMPTY_IMAGE_SLOT },
+        left: { ...EMPTY_IMAGE_SLOT },
+        right: { ...EMPTY_IMAGE_SLOT },
+        back: { ...EMPTY_IMAGE_SLOT },
+      });
+      setSaveError(null);
+      setSavedId(null);
+      setSaveUpdated(false);
+    }
+  }, [editProduct]);
 
   function patchSlot(view: ImageView, patch: Partial<ImageSlotState>) {
     setImageSlots((prev) => ({ ...prev, [view]: { ...prev[view], ...patch } }));
@@ -790,8 +868,14 @@ function AddProductSection() {
         ...(form.isTrending ? { isTrending: true } : {}),
       };
 
-      const id = await addProduct(productData);
-      setSavedId(id);
+      if (editProduct) {
+        await updateProduct(editProduct.id, productData);
+        setSaveUpdated(true);
+        onEditDone?.();
+      } else {
+        const id = await addProduct(productData);
+        setSavedId(id);
+      }
       handleReset();
     } catch (err) {
       setSaveError((err as Error).message ?? "Failed to save product.");
@@ -824,6 +908,7 @@ function AddProductSection() {
     });
     setSaveError(null);
     setSavedId(null);
+    setSaveUpdated(false);
   }
 
   const IMAGE_SLOTS: { view: ImageView; label: string; required: boolean }[] = [
@@ -836,9 +921,13 @@ function AddProductSection() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-playfair text-3xl font-semibold mb-1">Add Product</h2>
+        <h2 className="font-playfair text-3xl font-semibold mb-1">
+          {editProduct ? `Edit Product` : "Add Product"}
+        </h2>
         <p className="text-sm text-muted-foreground font-inter">
-          Fill in the fields below to add a new product to the catalog.
+          {editProduct
+            ? `Editing "${editProduct.name}" — update the fields below and save.`
+            : "Fill in the fields below to add a new product to the catalog."}
         </p>
       </div>
 
@@ -1057,14 +1146,20 @@ function AddProductSection() {
         )}
 
         {/* Success banner */}
-        {savedId && (
+        {(savedId || saveUpdated) && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 flex items-start gap-3">
             <Icon path="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-inter font-medium text-emerald-800">Product saved to Firestore</p>
-              <p className="text-xs font-inter text-emerald-700 mt-0.5">
-                Document ID: <code className="bg-emerald-100 px-1 rounded">{savedId}</code>
-              </p>
+              {saveUpdated ? (
+                <p className="text-sm font-inter font-medium text-emerald-800">Product updated in Firestore</p>
+              ) : (
+                <>
+                  <p className="text-sm font-inter font-medium text-emerald-800">Product saved to Firestore</p>
+                  <p className="text-xs font-inter text-emerald-700 mt-0.5">
+                    Document ID: <code className="bg-emerald-100 px-1 rounded">{savedId}</code>
+                  </p>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -1080,10 +1175,12 @@ function AddProductSection() {
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Button type="submit" disabled={saving} className="font-inter text-sm">
             <Icon path={ICONS.plus} className="w-4 h-4" />
-            {saving ? (uploadingView ? `Uploading ${uploadingView}…` : "Saving…") : "Save Product"}
+            {saving
+              ? (uploadingView ? `Uploading ${uploadingView}…` : "Saving…")
+              : (editProduct ? "Update Product" : "Save Product")}
           </Button>
           <Button type="button" variant="outline" className="font-inter text-sm" onClick={handleReset} disabled={saving}>
-            Clear Form
+            {editProduct ? "Cancel Edit" : "Clear Form"}
           </Button>
         </div>
       </form>
@@ -1228,6 +1325,17 @@ function BrandConfigSection() {
 export default function Admin() {
   const [activeSection, setActiveSection] = useState<Section>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  function handleEdit(p: Product) {
+    setEditingProduct(p);
+    setActiveSection("add-product");
+  }
+
+  function handleEditDone() {
+    setEditingProduct(null);
+    setActiveSection("products");
+  }
 
   return (
     <div className="min-h-screen bg-background flex font-inter">
@@ -1266,6 +1374,7 @@ export default function Admin() {
               onClick={() => {
                 setActiveSection(id);
                 setSidebarOpen(false);
+                if (id !== "add-product") setEditingProduct(null);
               }}
               className={`
                 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-inter
@@ -1323,8 +1432,13 @@ export default function Admin() {
         {/* Content */}
         <main className="flex-1 p-6 md:p-10 overflow-auto">
           {activeSection === "dashboard" && <DashboardSection />}
-          {activeSection === "products" && <ProductsSection />}
-          {activeSection === "add-product" && <AddProductSection />}
+          {activeSection === "products" && <ProductsSection onEdit={handleEdit} />}
+          {activeSection === "add-product" && (
+            <AddProductSection
+              editProduct={editingProduct}
+              onEditDone={handleEditDone}
+            />
+          )}
           {activeSection === "config" && <BrandConfigSection />}
         </main>
       </div>

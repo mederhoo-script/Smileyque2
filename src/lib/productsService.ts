@@ -14,6 +14,7 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  updateDoc,
   Timestamp,
   DocumentData,
   QueryDocumentSnapshot,
@@ -65,6 +66,14 @@ export async function getProducts(): Promise<Product[]> {
  */
 export async function deleteProduct(id: string): Promise<void> {
   await deleteDoc(doc(db, PRODUCTS_COLLECTION, id));
+}
+
+/**
+ * Update an existing product document in Firestore.
+ * Only the supplied fields are overwritten; `createdAt` is preserved.
+ */
+export async function updateProduct(id: string, data: Omit<Product, "id">): Promise<void> {
+  await updateDoc(doc(db, PRODUCTS_COLLECTION, id), { ...data });
 }
 
 /**
