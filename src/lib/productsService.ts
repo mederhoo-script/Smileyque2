@@ -19,7 +19,7 @@ import {
   DocumentData,
   QueryDocumentSnapshot,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import type { Product } from "@/data/products";
 
@@ -80,13 +80,18 @@ export async function updateProduct(id: string, data: Omit<Product, "id">): Prom
  * Upload a product image file to Firebase Storage.
  *
  * Files are stored under `products/{timestamp}_{view}_{originalFilename}`.
+ * The upload is wrapped in a 30-second timeout; if it does not complete in
+ * time (e.g. due to Storage security rules or a network stall) the task is
+ * cancelled and a descriptive error is thrown so the UI is never left stuck.
+ *
  * @param file  The image File object selected by the user.
  * @param view  Semantic view name — "front" | "left" | "right" | "back".
  * @returns     The public download URL for the uploaded image.
  */
 export async function uploadProductImage(
   file: File,
-  view: "front" | "left" | "right" | "back"
+  view: "front" | "left" | "right" | "back",
+  timeoutMs = 30_000
 ): Promise<string> {
   // Sanitize: keep only the base filename (strip any path separators) and
   // remove characters that are not safe for Storage object names.
@@ -99,6 +104,37 @@ export async function uploadProductImage(
   const path = `products/${unique}_${view}_${safeName}`;
 
   const storageRef = ref(storage, path);
-  const snapshot = await uploadBytes(storageRef, file);
-  return getDownloadURL(snapshot.ref);
+  const uploadTask = uploadBytesResumable(storageRef, file);
+
+  return new Promise<string>((resolve, reject) => {
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      uploadTask.cancel();
+      reject(
+        new Error(
+          `Image upload timed out after ${timeoutMs / 1000}s. ` +
+          "Ensure Firebase Storage security rules allow writes and your internet connection is stable."
+        )
+      );
+    }, timeoutMs);
+
+    uploadTask
+      .then((snapshot) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        return getDownloadURL(snapshot.ref);
+      })
+      .then((url) => { if (url) resolve(url); })
+      .catch((err) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+        }
+        reject(err);
+      });
+  });
 }

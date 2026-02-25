@@ -876,7 +876,9 @@ function AddProductSection({
         const id = await addProduct(productData);
         setSavedId(id);
       }
-      handleReset();
+      // Do NOT call handleReset() here — the success banner must remain
+      // visible. The form clears when the user clicks "Clear Form" or starts
+      // editing a field (handleChange already clears the success indicators).
     } catch (err) {
       setSaveError((err as Error).message ?? "Failed to save product.");
       setUploadingView(null);
