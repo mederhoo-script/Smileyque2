@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Products collection: publicly readable.
+    // Writes are constrained to documents that carry the expected product
+    // fields, reducing the risk of arbitrary data injection.  A full
+    // authentication-gated solution should be added once Firebase Auth is
+    // integrated into the admin panel.
+    match /products/{productId} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasAll(['name', 'description', 'price', 'category', 'image'])
+                   && request.resource.data.name is string
+                   && request.resource.data.price is string
+                   && request.resource.data.category is string
+                   && request.resource.data.image is string;
+
+      allow update: if request.resource.data.keys().hasAll(['name', 'description', 'price', 'category', 'image'])
+                   && request.resource.data.name is string
+                   && request.resource.data.price is string
+                   && request.resource.data.category is string
+                   && request.resource.data.image is string;
+
+      allow delete: if true;
+    }
+  }
+}

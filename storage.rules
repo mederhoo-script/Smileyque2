@@ -1,0 +1,15 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Product images: publicly readable; writes are limited to image files
+    // no larger than 10 MB.  Authentication-gating should be added once
+    // Firebase Auth is integrated into the admin panel — for now the
+    // content-type and size constraints are the primary guard against abuse.
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
