@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { products, categories, Product, ProductCategory, ProductOccasion } from "@/data/products";
-import { addProduct, getProducts, deleteProduct } from "@/lib/productsService";
+import { addProduct, getProducts, deleteProduct, uploadProductImage } from "@/lib/productsService";
 import { brand } from "@/config/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -486,10 +486,154 @@ function ProductsSection() {
 const OCCASION_OPTIONS: ProductOccasion[] = ["Formal", "Wedding", "Casual", "Party", "Traditional", "Any"];
 const CATEGORY_OPTIONS = categories.filter((c) => c !== "All") as Exclude<ProductCategory, "All">[];
 
+// Tag-chip input: type a value, press Enter or comma to add it
+function TagInput({
+  id,
+  tags,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  placeholder: string;
+}) {
+  const [input, setInput] = useState("");
+
+  function add(raw: string) {
+    const value = raw.trim();
+    if (value && !tags.includes(value)) {
+      onChange([...tags, value]);
+    }
+    setInput("");
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      add(input);
+    } else if (e.key === ",") {
+      e.preventDefault();
+      add(input);
+    } else if (e.key === "Backspace" && input === "" && tags.length > 0) {
+      onChange(tags.slice(0, -1));
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5 min-h-[38px] w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-within:ring-1 focus-within:ring-ring">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="flex items-center gap-1 bg-muted px-2 py-0.5 rounded-md text-xs font-inter"
+        >
+          {tag}
+          <button
+            type="button"
+            onClick={() => onChange(tags.filter((t) => t !== tag))}
+            className="text-muted-foreground hover:text-foreground leading-none"
+            aria-label={`Remove ${tag}`}
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      <input
+        id={id}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => add(input)}
+        placeholder={tags.length === 0 ? placeholder : ""}
+        className="flex-1 min-w-[80px] bg-transparent outline-none text-sm font-inter placeholder:text-muted-foreground"
+      />
+    </div>
+  );
+}
+
+// Image-upload slot: file picker + local preview
+function ImageSlot({
+  id,
+  label,
+  required,
+  file,
+  uploading,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  required?: boolean;
+  file: File | null;
+  uploading: boolean;
+  onChange: (file: File | null) => void;
+}) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="font-inter text-sm">
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </Label>
+      <div className="flex items-center gap-3">
+        <label
+          htmlFor={id}
+          className={`
+            inline-flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-dashed border-border
+            text-xs font-inter text-muted-foreground hover:border-primary hover:text-primary transition-colors
+            ${uploading ? "opacity-50 pointer-events-none" : ""}
+          `}
+        >
+          <Icon path={ICONS.plus} className="w-3 h-3" />
+          {file ? "Change file" : "Choose file"}
+          <input
+            id={id}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            required={required && !file}
+            onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+          />
+        </label>
+        {file && (
+          <span className="text-xs font-inter text-muted-foreground truncate max-w-[140px]">
+            {file.name}
+          </span>
+        )}
+        {uploading && (
+          <span className="text-xs font-inter text-muted-foreground">Uploading…</span>
+        )}
+      </div>
+      {previewUrl && (
+        <img
+          src={previewUrl}
+          alt={label}
+          className="h-24 w-24 object-cover rounded-md border border-border bg-muted"
+        />
+      )}
+    </div>
+  );
+}
+
+type ImageView = "front" | "left" | "right" | "back";
+
 function AddProductSection() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [uploadingView, setUploadingView] = useState<ImageView | null>(null);
+
+  // Text / select fields
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -498,15 +642,21 @@ function AddProductSection() {
     originalPrice: "",
     category: "" as Exclude<ProductCategory, "All"> | "",
     occasion: "" as ProductOccasion | "",
-    image: "",
-    imageLeft: "",
-    imageRight: "",
-    imageBack: "",
-    colors: "",
-    sizes: "",
     featured: false,
     isNew: false,
     isTrending: false,
+  });
+
+  // Free-form string[] tags
+  const [colors, setColors] = useState<string[]>([]);
+  const [sizes, setSizes] = useState<string[]>([]);
+
+  // Image files (one per view)
+  const [imageFiles, setImageFiles] = useState<Record<ImageView, File | null>>({
+    front: null,
+    left: null,
+    right: null,
+    back: null,
   });
 
   function handleChange(field: keyof typeof form, value: string | boolean) {
@@ -515,12 +665,32 @@ function AddProductSection() {
     setSavedId(null);
   }
 
+  function handleImageFile(view: ImageView, file: File | null) {
+    setImageFiles((prev) => ({ ...prev, [view]: file }));
+    setSaveError(null);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!imageFiles.front) {
+      setSaveError("A front / main image is required.");
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     setSavedId(null);
     try {
+      // Upload each selected file to Firebase Storage
+      const imageUrls: Partial<Record<ImageView, string>> = {};
+      for (const view of (["front", "left", "right", "back"] as ImageView[])) {
+        const file = imageFiles[view];
+        if (file) {
+          setUploadingView(view);
+          imageUrls[view] = await uploadProductImage(file, view);
+        }
+      }
+      setUploadingView(null);
+
       const priceNum = parseInt(form.price.replace(/\D/g, ""), 10) || 0;
       const origPriceNum = form.originalPrice
         ? parseInt(form.originalPrice.replace(/\D/g, ""), 10) || 0
@@ -536,15 +706,15 @@ function AddProductSection() {
         ...(origPriceNum !== undefined ? { originalPriceValue: origPriceNum } : {}),
         category: form.category as Exclude<ProductCategory, "All">,
         ...(form.occasion ? { occasion: form.occasion as ProductOccasion } : {}),
-        image: form.image,
+        image: imageUrls.front ?? "",
         images: {
-          ...(form.image ? { front: form.image } : {}),
-          ...(form.imageLeft ? { left: form.imageLeft } : {}),
-          ...(form.imageRight ? { right: form.imageRight } : {}),
-          ...(form.imageBack ? { back: form.imageBack } : {}),
+          ...(imageUrls.front ? { front: imageUrls.front } : {}),
+          ...(imageUrls.left ? { left: imageUrls.left } : {}),
+          ...(imageUrls.right ? { right: imageUrls.right } : {}),
+          ...(imageUrls.back ? { back: imageUrls.back } : {}),
         },
-        ...(form.colors ? { colors: form.colors.split(",").map((c) => c.trim()).filter(Boolean) } : {}),
-        ...(form.sizes ? { sizes: form.sizes.split(",").map((s) => s.trim()).filter(Boolean) } : {}),
+        ...(colors.length > 0 ? { colors } : {}),
+        ...(sizes.length > 0 ? { sizes } : {}),
         ...(form.featured ? { featured: true } : {}),
         ...(form.isNew ? { isNew: true } : {}),
         ...(form.isTrending ? { isTrending: true } : {}),
@@ -555,6 +725,7 @@ function AddProductSection() {
       handleReset();
     } catch (err) {
       setSaveError((err as Error).message ?? "Failed to save product.");
+      setUploadingView(null);
     } finally {
       setSaving(false);
     }
@@ -569,19 +740,23 @@ function AddProductSection() {
       originalPrice: "",
       category: "",
       occasion: "",
-      image: "",
-      imageLeft: "",
-      imageRight: "",
-      imageBack: "",
-      colors: "",
-      sizes: "",
       featured: false,
       isNew: false,
       isTrending: false,
     });
+    setColors([]);
+    setSizes([]);
+    setImageFiles({ front: null, left: null, right: null, back: null });
     setSaveError(null);
     setSavedId(null);
   }
+
+  const IMAGE_SLOTS: { view: ImageView; label: string; required: boolean }[] = [
+    { view: "front", label: "Front / Main Image", required: true },
+    { view: "left", label: "Left Side Image", required: false },
+    { view: "right", label: "Right Side Image", required: false },
+    { view: "back", label: "Back Image", required: false },
+  ];
 
   return (
     <div className="space-y-8">
@@ -711,48 +886,31 @@ function AddProductSection() {
           </CardContent>
         </Card>
 
-        {/* Media */}
+        {/* Product Images — file upload */}
         <Card className="border border-border">
           <CardHeader className="pb-3">
             <CardTitle className="font-playfair text-lg font-semibold">Product Images</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <p className="text-xs text-muted-foreground font-inter">
-              Provide URLs for each view. Only the Front (Main) image is required.
+              Upload image files for each view. Only the Front (Main) image is required.
+              Images are stored in Firebase Storage.
             </p>
-            {([
-              { id: "ap-image", field: "image" as const, label: "Front / Main Image", required: true },
-              { id: "ap-image-left", field: "imageLeft" as const, label: "Left Side Image", required: false },
-              { id: "ap-image-right", field: "imageRight" as const, label: "Right Side Image", required: false },
-              { id: "ap-image-back", field: "imageBack" as const, label: "Back Image", required: false },
-            ]).map(({ id, field, label, required }) => (
-              <div key={id} className="space-y-1.5">
-                <Label htmlFor={id} className="font-inter text-sm">
-                  {label}{required && <span className="text-destructive"> *</span>}
-                </Label>
-                <Input
-                  id={id}
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={form[field]}
-                  onChange={(e) => handleChange(field, e.target.value)}
-                  className="font-inter text-sm"
-                  required={required}
-                />
-                {form[field] && (
-                  <img
-                    src={form[field]}
-                    alt={`${label} preview`}
-                    className="mt-1 h-24 w-24 object-cover rounded-md border border-border bg-muted"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
-                )}
-              </div>
+            {IMAGE_SLOTS.map(({ view, label, required }) => (
+              <ImageSlot
+                key={view}
+                id={`ap-image-${view}`}
+                label={label}
+                required={required}
+                file={imageFiles[view]}
+                uploading={saving && uploadingView === view}
+                onChange={(file) => handleImageFile(view, file)}
+              />
             ))}
           </CardContent>
         </Card>
 
-        {/* Variants */}
+        {/* Variants — tag-chip inputs */}
         <Card className="border border-border">
           <CardHeader className="pb-3">
             <CardTitle className="font-playfair text-lg font-semibold">Variants</CardTitle>
@@ -760,25 +918,23 @@ function AddProductSection() {
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1.5">
               <Label htmlFor="ap-colors" className="font-inter text-sm">Colors</Label>
-              <Input
+              <TagInput
                 id="ap-colors"
-                placeholder="e.g. Red, Blue, Gold"
-                value={form.colors}
-                onChange={(e) => handleChange("colors", e.target.value)}
-                className="font-inter text-sm"
+                tags={colors}
+                onChange={setColors}
+                placeholder="e.g. Red, Blue, Gold…"
               />
-              <p className="text-xs text-muted-foreground font-inter">Comma-separated list</p>
+              <p className="text-xs text-muted-foreground font-inter">Type a color and press Enter or comma to add</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ap-sizes" className="font-inter text-sm">Sizes</Label>
-              <Input
+              <TagInput
                 id="ap-sizes"
-                placeholder="e.g. S, M, L, XL"
-                value={form.sizes}
-                onChange={(e) => handleChange("sizes", e.target.value)}
-                className="font-inter text-sm"
+                tags={sizes}
+                onChange={setSizes}
+                placeholder="e.g. S, M, L, XL…"
               />
-              <p className="text-xs text-muted-foreground font-inter">Comma-separated list</p>
+              <p className="text-xs text-muted-foreground font-inter">Type a size and press Enter or comma to add</p>
             </div>
           </CardContent>
         </Card>
@@ -834,11 +990,18 @@ function AddProductSection() {
           </div>
         )}
 
+        {/* Upload progress indicator */}
+        {saving && uploadingView && (
+          <p className="text-xs font-inter text-muted-foreground">
+            Uploading {uploadingView} image to Firebase Storage…
+          </p>
+        )}
+
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Button type="submit" disabled={saving} className="font-inter text-sm">
             <Icon path={ICONS.plus} className="w-4 h-4" />
-            {saving ? "Saving…" : "Save Product"}
+            {saving ? (uploadingView ? `Uploading ${uploadingView}…` : "Saving…") : "Save Product"}
           </Button>
           <Button type="button" variant="outline" className="font-inter text-sm" onClick={handleReset} disabled={saving}>
             Clear Form

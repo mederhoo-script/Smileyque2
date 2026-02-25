@@ -18,7 +18,8 @@ import {
   DocumentData,
   QueryDocumentSnapshot,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import type { Product } from "@/data/products";
 
 export const PRODUCTS_COLLECTION = "products";
@@ -64,4 +65,32 @@ export async function getProducts(): Promise<Product[]> {
  */
 export async function deleteProduct(id: string): Promise<void> {
   await deleteDoc(doc(db, PRODUCTS_COLLECTION, id));
+}
+
+/**
+ * Upload a product image file to Firebase Storage.
+ *
+ * Files are stored under `products/{timestamp}_{view}_{originalFilename}`.
+ * @param file  The image File object selected by the user.
+ * @param view  Semantic view name — "front" | "left" | "right" | "back".
+ * @returns     The public download URL for the uploaded image.
+ */
+export async function uploadProductImage(
+  file: File,
+  view: "front" | "left" | "right" | "back"
+): Promise<string> {
+  // Sanitise: keep only the base filename (strip any path separators) and
+  // remove characters that are not safe for Storage object names.
+  const safeName = file.name
+    .replace(/[/\\]/g, "_")
+    .replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  // Combine timestamp + random suffix to ensure uniqueness even when multiple
+  // images are uploaded within the same millisecond.
+  const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const path = `products/${unique}_${view}_${safeName}`;
+
+  const storageRef = ref(storage, path);
+  const snapshot = await uploadBytes(storageRef, file);
+  return getDownloadURL(snapshot.ref);
 }
