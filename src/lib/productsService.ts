@@ -79,15 +79,14 @@ export async function uploadProductImage(
   file: File,
   view: "front" | "left" | "right" | "back"
 ): Promise<string> {
-  // Sanitise: keep only the base filename (strip any path separators) and
+  // Sanitize: keep only the base filename (strip any path separators) and
   // remove characters that are not safe for Storage object names.
   const safeName = file.name
     .replace(/[/\\]/g, "_")
     .replace(/[^a-zA-Z0-9._-]/g, "_");
 
-  // Combine timestamp + random suffix to ensure uniqueness even when multiple
-  // images are uploaded within the same millisecond.
-  const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  // Use crypto.randomUUID for a guaranteed-unique prefix even under concurrent uploads.
+  const unique = `${Date.now()}_${crypto.randomUUID()}`;
   const path = `products/${unique}_${view}_${safeName}`;
 
   const storageRef = ref(storage, path);

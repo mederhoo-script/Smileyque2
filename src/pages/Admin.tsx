@@ -551,74 +551,129 @@ function TagInput({
   );
 }
 
-// Image-upload slot: file picker + local preview
+type ImageMode = "url" | "upload";
+
+// Dual-mode image slot: toggle between pasting a URL or uploading a file
 function ImageSlot({
   id,
   label,
   required,
+  mode,
+  url,
   file,
   uploading,
-  onChange,
+  onModeChange,
+  onUrlChange,
+  onFileChange,
 }: {
   id: string;
   label: string;
   required?: boolean;
+  mode: ImageMode;
+  url: string;
   file: File | null;
   uploading: boolean;
-  onChange: (file: File | null) => void;
+  onModeChange: (m: ImageMode) => void;
+  onUrlChange: (u: string) => void;
+  onFileChange: (f: File | null) => void;
 }) {
+  // Object-URL for local file preview — revoked on file or unmount
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
+    if (!file) { setPreviewUrl(null); return; }
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
   }, [file]);
+
+  const displayedPreview = mode === "upload" ? previewUrl : (url || null);
+  const hasValue = mode === "url" ? url.trim() !== "" : file !== null;
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id} className="font-inter text-sm">
-        {label}
-        {required && <span className="text-destructive"> *</span>}
-      </Label>
-      <div className="flex items-center gap-3">
-        <label
-          htmlFor={id}
-          className={`
-            inline-flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-dashed border-border
-            text-xs font-inter text-muted-foreground hover:border-primary hover:text-primary transition-colors
-            ${uploading ? "opacity-50 pointer-events-none" : ""}
-          `}
-        >
-          <Icon path={ICONS.plus} className="w-3 h-3" />
-          {file ? "Change file" : "Choose file"}
-          <input
-            id={id}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            required={required && !file}
-            onChange={(e) => onChange(e.target.files?.[0] ?? null)}
-          />
-        </label>
-        {file && (
-          <span className="text-xs font-inter text-muted-foreground truncate max-w-[140px]">
-            {file.name}
-          </span>
-        )}
-        {uploading && (
-          <span className="text-xs font-inter text-muted-foreground">Uploading…</span>
-        )}
+      {/* Label + mode toggle */}
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor={id} className="font-inter text-sm">
+          {label}
+          {required && <span className="text-destructive"> *</span>}
+        </Label>
+        <div className="flex rounded-md border border-border overflow-hidden text-xs font-inter">
+          <button
+            type="button"
+            onClick={() => onModeChange("url")}
+            className={`px-3 py-1 transition-colors ${
+              mode === "url"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            URL
+          </button>
+          <button
+            type="button"
+            onClick={() => onModeChange("upload")}
+            className={`px-3 py-1 border-l border-border transition-colors ${
+              mode === "upload"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Upload
+          </button>
+        </div>
       </div>
-      {previewUrl && (
+
+      {/* URL mode */}
+      {mode === "url" && (
+        <Input
+          id={id}
+          type="url"
+          placeholder="https://example.com/image.jpg"
+          value={url}
+          onChange={(e) => onUrlChange(e.target.value)}
+          className="font-inter text-sm"
+          required={required && !hasValue}
+        />
+      )}
+
+      {/* Upload mode */}
+      {mode === "upload" && (
+        <div className="flex items-center gap-3">
+          <label
+            htmlFor={id}
+            className={`inline-flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border border-dashed border-border
+              text-xs font-inter text-muted-foreground hover:border-primary hover:text-primary transition-colors
+              ${uploading ? "opacity-50 pointer-events-none" : ""}`}
+          >
+            <Icon path={ICONS.plus} className="w-3 h-3" />
+            {file ? "Change file" : "Choose file"}
+            <input
+              id={id}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              required={required && !hasValue}
+              onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          {file && (
+            <span className="text-xs font-inter text-muted-foreground truncate max-w-[160px]">
+              {file.name}
+            </span>
+          )}
+          {uploading && (
+            <span className="text-xs font-inter text-muted-foreground">Uploading…</span>
+          )}
+        </div>
+      )}
+
+      {/* Preview (shared) */}
+      {displayedPreview && (
         <img
-          src={previewUrl}
+          src={displayedPreview}
           alt={label}
           className="h-24 w-24 object-cover rounded-md border border-border bg-muted"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
         />
       )}
     </div>
@@ -626,6 +681,14 @@ function ImageSlot({
 }
 
 type ImageView = "front" | "left" | "right" | "back";
+
+interface ImageSlotState {
+  mode: ImageMode;
+  url: string;
+  file: File | null;
+}
+
+const EMPTY_IMAGE_SLOT: ImageSlotState = { mode: "url", url: "", file: null };
 
 function AddProductSection() {
   const [saving, setSaving] = useState(false);
@@ -651,13 +714,19 @@ function AddProductSection() {
   const [colors, setColors] = useState<string[]>([]);
   const [sizes, setSizes] = useState<string[]>([]);
 
-  // Image files (one per view)
-  const [imageFiles, setImageFiles] = useState<Record<ImageView, File | null>>({
-    front: null,
-    left: null,
-    right: null,
-    back: null,
+  // Per-view image state: each slot is independently either URL or file-upload mode
+  const [imageSlots, setImageSlots] = useState<Record<ImageView, ImageSlotState>>({
+    front: { ...EMPTY_IMAGE_SLOT },
+    left: { ...EMPTY_IMAGE_SLOT },
+    right: { ...EMPTY_IMAGE_SLOT },
+    back: { ...EMPTY_IMAGE_SLOT },
   });
+
+  function patchSlot(view: ImageView, patch: Partial<ImageSlotState>) {
+    setImageSlots((prev) => ({ ...prev, [view]: { ...prev[view], ...patch } }));
+    setSaveError(null);
+    setSavedId(null);
+  }
 
   function handleChange(field: keyof typeof form, value: string | boolean) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -665,28 +734,29 @@ function AddProductSection() {
     setSavedId(null);
   }
 
-  function handleImageFile(view: ImageView, file: File | null) {
-    setImageFiles((prev) => ({ ...prev, [view]: file }));
-    setSaveError(null);
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!imageFiles.front) {
-      setSaveError("A front / main image is required.");
+    const frontSlot = imageSlots.front;
+    const frontHasValue =
+      (frontSlot.mode === "url" && frontSlot.url.trim() !== "") ||
+      (frontSlot.mode === "upload" && frontSlot.file !== null);
+    if (!frontHasValue) {
+      setSaveError("Please provide a front/main image by entering a URL or uploading a file.");
       return;
     }
     setSaving(true);
     setSaveError(null);
     setSavedId(null);
     try {
-      // Upload each selected file to Firebase Storage
+      // Resolve each slot: upload files, pass URLs through directly
       const imageUrls: Partial<Record<ImageView, string>> = {};
       for (const view of (["front", "left", "right", "back"] as ImageView[])) {
-        const file = imageFiles[view];
-        if (file) {
+        const slot = imageSlots[view];
+        if (slot.mode === "url" && slot.url.trim()) {
+          imageUrls[view] = slot.url.trim();
+        } else if (slot.mode === "upload" && slot.file) {
           setUploadingView(view);
-          imageUrls[view] = await uploadProductImage(file, view);
+          imageUrls[view] = await uploadProductImage(slot.file, view);
         }
       }
       setUploadingView(null);
@@ -746,7 +816,12 @@ function AddProductSection() {
     });
     setColors([]);
     setSizes([]);
-    setImageFiles({ front: null, left: null, right: null, back: null });
+    setImageSlots({
+      front: { ...EMPTY_IMAGE_SLOT },
+      left: { ...EMPTY_IMAGE_SLOT },
+      right: { ...EMPTY_IMAGE_SLOT },
+      back: { ...EMPTY_IMAGE_SLOT },
+    });
     setSaveError(null);
     setSavedId(null);
   }
@@ -886,15 +961,15 @@ function AddProductSection() {
           </CardContent>
         </Card>
 
-        {/* Product Images — file upload */}
+        {/* Product Images — URL or file upload per slot */}
         <Card className="border border-border">
           <CardHeader className="pb-3">
             <CardTitle className="font-playfair text-lg font-semibold">Product Images</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <p className="text-xs text-muted-foreground font-inter">
-              Upload image files for each view. Only the Front (Main) image is required.
-              Images are stored in Firebase Storage.
+              For each view, paste a URL <strong>or</strong> upload a file from your device.
+              Only the Front (Main) image is required. Uploaded files are stored in Firebase Storage.
             </p>
             {IMAGE_SLOTS.map(({ view, label, required }) => (
               <ImageSlot
@@ -902,9 +977,13 @@ function AddProductSection() {
                 id={`ap-image-${view}`}
                 label={label}
                 required={required}
-                file={imageFiles[view]}
+                mode={imageSlots[view].mode}
+                url={imageSlots[view].url}
+                file={imageSlots[view].file}
                 uploading={saving && uploadingView === view}
-                onChange={(file) => handleImageFile(view, file)}
+                onModeChange={(m) => patchSlot(view, { mode: m, url: "", file: null })}
+                onUrlChange={(u) => patchSlot(view, { url: u })}
+                onFileChange={(f) => patchSlot(view, { file: f })}
               />
             ))}
           </CardContent>
