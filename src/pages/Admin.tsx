@@ -70,17 +70,17 @@ function StatCard({
 }) {
   return (
     <Card className="border border-border">
-      <CardContent className="p-6 flex items-center gap-4">
+      <CardContent className="p-5 space-y-3">
         <div
-          className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${
+          className={`w-10 h-10 rounded-lg flex items-center justify-center ${
             accent ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
           }`}
         >
-          <Icon path={iconPath} className="w-5 h-5" />
+          <Icon path={iconPath} className="w-4 h-4" />
         </div>
         <div>
-          <p className="text-2xl font-playfair font-semibold">{value}</p>
-          <p className="text-xs text-muted-foreground font-inter tracking-wide uppercase mt-0.5">{label}</p>
+          <p className="text-3xl font-playfair font-bold leading-none">{value}</p>
+          <p className="text-xs text-muted-foreground font-inter tracking-wide uppercase mt-2">{label}</p>
         </div>
       </CardContent>
     </Card>
@@ -114,7 +114,7 @@ function DashboardSection() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="Total Products" value={totalProducts} iconPath={ICONS.products} accent />
         <StatCard label="Categories" value={totalCategories} iconPath={ICONS.tag} />
         <StatCard label="Featured" value={featured} iconPath={ICONS.star} />
