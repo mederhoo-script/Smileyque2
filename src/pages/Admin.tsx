@@ -369,6 +369,9 @@ function AddProductSection() {
     category: "" as Exclude<ProductCategory, "All"> | "",
     occasion: "" as ProductOccasion | "",
     image: "",
+    imageLeft: "",
+    imageRight: "",
+    imageBack: "",
     colors: "",
     sizes: "",
     featured: false,
@@ -396,6 +399,9 @@ function AddProductSection() {
       category: "",
       occasion: "",
       image: "",
+      imageLeft: "",
+      imageRight: "",
+      imageBack: "",
       colors: "",
       sizes: "",
       featured: false,
@@ -536,29 +542,41 @@ function AddProductSection() {
         {/* Media */}
         <Card className="border border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="font-playfair text-lg font-semibold">Media</CardTitle>
+            <CardTitle className="font-playfair text-lg font-semibold">Product Images</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="ap-image" className="font-inter text-sm">Primary Image URL <span className="text-destructive">*</span></Label>
-              <Input
-                id="ap-image"
-                type="url"
-                placeholder="https://example.com/product-image.jpg"
-                value={form.image}
-                onChange={(e) => handleChange("image", e.target.value)}
-                className="font-inter text-sm"
-                required
-              />
-            </div>
-            {form.image && (
-              <img
-                src={form.image}
-                alt="Preview"
-                className="h-32 w-32 object-cover rounded-lg border border-border bg-muted"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-            )}
+            <p className="text-xs text-muted-foreground font-inter">
+              Provide URLs for each view. Only the Front (Main) image is required.
+            </p>
+            {([
+              { id: "ap-image", field: "image" as const, label: "Front / Main Image", required: true },
+              { id: "ap-image-left", field: "imageLeft" as const, label: "Left Side Image", required: false },
+              { id: "ap-image-right", field: "imageRight" as const, label: "Right Side Image", required: false },
+              { id: "ap-image-back", field: "imageBack" as const, label: "Back Image", required: false },
+            ]).map(({ id, field, label, required }) => (
+              <div key={id} className="space-y-1.5">
+                <Label htmlFor={id} className="font-inter text-sm">
+                  {label}{required && <span className="text-destructive"> *</span>}
+                </Label>
+                <Input
+                  id={id}
+                  type="url"
+                  placeholder="https://example.com/image.jpg"
+                  value={form[field]}
+                  onChange={(e) => handleChange(field, e.target.value)}
+                  className="font-inter text-sm"
+                  required={required}
+                />
+                {form[field] && (
+                  <img
+                    src={form[field]}
+                    alt={`${label} preview`}
+                    className="mt-1 h-24 w-24 object-cover rounded-md border border-border bg-muted"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
 

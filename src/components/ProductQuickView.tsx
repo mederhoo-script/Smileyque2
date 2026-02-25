@@ -77,8 +77,10 @@ export default function ProductQuickView({ product, onClose, onNavigate }: Props
   // Build gallery — must be above the early return so that goImg (a hook) is
   // always called the same number of times regardless of whether product is null.
   // (Rules of Hooks: hooks must not be conditional on render-to-render state.)
-  const gallery: string[] = product?.images?.length
-    ? product.images
+  const gallery: string[] = product?.images
+    ? (["front", "left", "right", "back"] as const)
+        .map(k => product.images![k])
+        .filter((v): v is string => Boolean(v))
     : product
       ? [product.image]
       : [];
