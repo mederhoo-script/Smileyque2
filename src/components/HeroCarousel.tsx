@@ -13,42 +13,18 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-
-interface Slide {
-  bg: string;
-  tag: string;
-  title: string;
-  subtitle: string;
-}
-
-const slides: Slide[] = [
-  {
-    bg: "/aurore/aurore-s1-bg-a.jpg",
-    tag: "New Arrivals",
-    title: "Wear Your Story",
-    subtitle: "Bespoke luxury fashion crafted for extraordinary moments",
-  },
-  {
-    bg: "/aurore/aurore-s1-bg-b.jpg",
-    tag: "Trending Now",
-    title: "Cape Collection",
-    subtitle: "Dramatic silhouettes that command every room you enter",
-  },
-  {
-    bg: "/aurore/aurore-s1-bg-c.jpg",
-    tag: "Bridal 2026",
-    title: "Your Perfect Day",
-    subtitle: "Fully bespoke bridal creations tailored to your vision",
-  },
-];
-
-const TOTAL = slides.length;
+import { useSite } from "@/context/SiteContext";
 const AUTOPLAY_MS = 5000;
 const TRANSITION_MS = 500; // matches Aurore speed:500
 
 export default function HeroCarousel() {
-  const [current, setCurrent]     = useState(0);
-  const [transitioning, setTrans] = useState(false);
+  const { settings } = useSite();
+  const slides = settings.heroSlides;
+  const TOTAL = Math.max(1, slides.length);
+
+  const [current, setCurrent] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_transitioning, setTrans] = useState(false);
 
   // For live-drag: offset in px relative to the snapped position
   const [dragOffset, setDragOffset] = useState(0);
@@ -57,6 +33,11 @@ export default function HeroCarousel() {
   const touchStartY  = useRef(0);
   const autoTimer    = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Reset current index if slides change and current is out of bounds
+  useEffect(() => {
+    if (current >= TOTAL) setCurrent(0);
+  }, [TOTAL, current]);
 
   // ── helpers ──────────────────────────────────────────────────────────────
   const stopAuto = useCallback(() => {
@@ -70,7 +51,7 @@ export default function HeroCarousel() {
     setDragOffset(0);
     setCurrent(target);
     setTimeout(() => setTrans(false), TRANSITION_MS + 50);
-  }, []);
+  }, [TOTAL]);
 
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
@@ -87,7 +68,7 @@ export default function HeroCarousel() {
         return target;
       });
     }, AUTOPLAY_MS);
-  }, [stopAuto]);
+  }, [stopAuto, TOTAL]);
 
   useEffect(() => {
     startAuto();
@@ -159,7 +140,7 @@ export default function HeroCarousel() {
   // Each slide occupies 1/TOTAL of the track, so we step by (100/TOTAL)% per slide.
   const translateX = `calc(${-current * (100 / TOTAL)}% + ${dragOffset}px)`;
 
-  const slide = slides[current];
+  const slide = slides[current] ?? { bg: "", tag: "", title: "", subtitle: "" };
 
   return (
     <section

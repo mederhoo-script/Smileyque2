@@ -1,14 +1,16 @@
 import { X, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { brand, buildWhatsAppOrderUrl } from "@/config/brand";
+import { useSite, buildWhatsAppOrderUrl } from "@/context/SiteContext";
 import { cn } from "@/lib/utils";
 
 export default function CartDrawer() {
   const { items, isCartOpen, closeCart, removeItem, updateQuantity } = useCart();
+  const { settings } = useSite();
 
   const handleWhatsAppOrder = () => {
     if (items.length === 0) return;
     const url = buildWhatsAppOrderUrl(
+      settings.brand,
       items.map((i) => ({ name: i.product.name, quantity: i.quantity }))
     );
     window.open(url, "_blank", "noopener,noreferrer");

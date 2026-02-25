@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { X, Search, SlidersHorizontal, ChevronDown } from "lucide-react";
-import { products, ProductCategory, ProductOccasion, categories } from "@/data/products";
+import { ProductCategory, ProductOccasion, categories } from "@/data/products";
 import ProductCard from "@/components/ProductCard";
 import { Product } from "@/data/products";
 import { cn } from "@/lib/utils";
+import { useSite } from "@/context/SiteContext";
 
 interface SearchModalProps {
     isOpen: boolean;
@@ -23,6 +24,7 @@ const priceRanges = [
 const occasions: ProductOccasion[] = ["Formal", "Wedding", "Casual", "Party", "Traditional", "Any"];
 
 export default function SearchModal({ isOpen, onClose, onQuickView }: SearchModalProps) {
+    const { settings } = useSite();
     const [query, setQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<ProductCategory>("All");
     const [selectedOccasion, setSelectedOccasion] = useState<ProductOccasion | "">("");
@@ -61,7 +63,7 @@ export default function SearchModal({ isOpen, onClose, onQuickView }: SearchModa
     }, [isOpen]);
 
     const filteredProducts = useMemo(() => {
-        let result = [...products];
+        let result = [...settings.products];
 
         // Text search
         if (query.trim()) {

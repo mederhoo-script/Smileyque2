@@ -1,7 +1,9 @@
 import Layout from "@/components/Layout";
-import { brand } from "@/config/brand";
+import { useSite } from "@/context/SiteContext";
 
 export default function About() {
+  const { settings } = useSite();
+  const { brand } = settings;
   return (
     <Layout>
       {/* Page header */}
@@ -10,7 +12,7 @@ export default function About() {
           Our Story
         </p>
         <h1 className="font-playfair text-5xl md:text-6xl font-semibold mb-4">
-          About Smileyque
+          About {brand.brandName}
         </h1>
         <div className="gold-divider" />
       </section>
@@ -20,7 +22,7 @@ export default function About() {
         <div className="img-zoom order-2 lg:order-1">
           <img
             src={brand.aboutImage}
-            alt="Smileyque atelier"
+            alt={`${brand.brandName} atelier`}
             className="w-full h-full object-cover min-h-[400px]"
           />
         </div>
@@ -33,10 +35,10 @@ export default function About() {
               Where Fashion Becomes a Personal Language
             </h2>
             <p className="font-inter text-sm text-muted-foreground leading-relaxed mb-4">
-              Smileyque was born from a simple belief: clothing is not merely fabric — it is identity, confidence, and artistry woven together. Every piece we create is a conversation between the designer's vision and the wearer's soul.
+              {brand.brandName} was born from a simple belief: clothing is not merely fabric — it is identity, confidence, and artistry woven together. Every piece we create is a conversation between the designer's vision and the wearer's soul.
             </p>
             <p className="font-inter text-sm text-muted-foreground leading-relaxed">
-              Founded in Lagos, Nigeria, Smileyque has quietly become a destination for women and men who refuse to settle for ordinary. Our studio merges West African heritage with contemporary European silhouettes, producing collections that are global in sensibility yet deeply rooted in culture.
+              {brand.tagline} — {brand.subTagline}.
             </p>
           </div>
         </div>
@@ -49,7 +51,7 @@ export default function About() {
         </blockquote>
         <div className="gold-divider mt-8" />
         <p className="font-inter text-xs text-background/40 tracking-widest uppercase mt-4">
-          The Smileyque Philosophy
+          The {brand.brandName} Philosophy
         </p>
       </section>
 
@@ -64,7 +66,7 @@ export default function About() {
               Craftsmanship Is in Every Detail
             </h2>
             <p className="font-inter text-sm text-muted-foreground leading-relaxed mb-4">
-              The creative mind behind Smileyque brings over a decade of couture training, blending traditional hand-sewing techniques with modern pattern-making to produce pieces that feel as extraordinary as they look.
+              The creative mind behind {brand.brandName} brings over a decade of couture training, blending traditional hand-sewing techniques with modern pattern-making to produce pieces that feel as extraordinary as they look.
             </p>
             <p className="font-inter text-sm text-muted-foreground leading-relaxed">
               Every client is seen as a canvas — no two orders are ever the same. From the first measurement to the final fitting, the process is intimate, precise, and always personal.
@@ -74,7 +76,7 @@ export default function About() {
         <div className="img-zoom">
           <img
             src={brand.designerImage}
-            alt="Smileyque designer"
+            alt={`${brand.brandName} designer`}
             className="w-full h-full object-cover min-h-[400px]"
           />
         </div>

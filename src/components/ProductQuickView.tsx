@@ -14,10 +14,10 @@ import {
   ChevronLeft, ChevronRight, Heart,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Product, products as allProducts } from "@/data/products";
+import { Product } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
-import { buildWhatsAppOrderUrl } from "@/config/brand";
+import { useSite, buildWhatsAppOrderUrl } from "@/context/SiteContext";
 import { getSwatchColor } from "@/lib/colorMap";
 
 interface Props {
@@ -41,6 +41,7 @@ const TAB_CONTENT: Record<Tab, string> = {
 
 export default function ProductQuickView({ product, onClose, onNavigate }: Props) {
   const { addItem } = useCart();
+  const { settings } = useSite();
   const [added, setAdded] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
@@ -96,10 +97,10 @@ export default function ProductQuickView({ product, onClose, onNavigate }: Props
     setTimeout(() => setAdded(false), 2400);
   };
 
-  const waUrl = buildWhatsAppOrderUrl([{ name: product.name, quantity: qty }]);
+  const waUrl = buildWhatsAppOrderUrl(settings.brand, [{ name: product.name, quantity: qty }]);
 
   // Related products: same category, excluding current
-  const related = allProducts
+  const related = settings.products
     .filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 6);
 

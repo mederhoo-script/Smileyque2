@@ -2,18 +2,20 @@ import { useState } from "react";
 import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
 import ProductQuickView from "@/components/ProductQuickView";
-import { products, categories, ProductCategory } from "@/data/products";
+import { categories, ProductCategory } from "@/data/products";
 import { Product } from "@/data/products";
+import { useSite } from "@/context/SiteContext";
 import { cn } from "@/lib/utils";
 
 export default function Collections() {
+  const { settings } = useSite();
   const [activeCategory, setActiveCategory] = useState<ProductCategory>("All");
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
   const filtered =
     activeCategory === "All"
-      ? products
-      : products.filter((p) => p.category === activeCategory);
+      ? settings.products
+      : settings.products.filter((p) => p.category === activeCategory);
 
   return (
     <Layout>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ShoppingBag, Menu, X, Search } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { brand } from "@/config/brand";
+import { useSite } from "@/context/SiteContext";
 import { cn } from "@/lib/utils";
 
 interface NavbarProps {
@@ -19,6 +19,8 @@ const navLinks = [
 
 export default function Navbar({ onSearchOpen }: NavbarProps) {
   const { totalItems, openCart } = useCart();
+  const { settings } = useSite();
+  const { brand } = settings;
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);

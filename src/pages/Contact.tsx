@@ -1,9 +1,11 @@
 import Layout from "@/components/Layout";
-import { brand, buildWhatsAppOrderUrl } from "@/config/brand";
+import { useSite } from "@/context/SiteContext";
 import { MapPin, Phone, Mail, MessageCircle } from "lucide-react";
 
 export default function Contact() {
-  const whatsappUrl = `https://wa.me/${brand.whatsappNumber}?text=${encodeURIComponent("Hello! I would like to inquire about a bespoke order at Smileyque.")}`;
+  const { settings } = useSite();
+  const { brand } = settings;
+  const whatsappUrl = `https://wa.me/${brand.whatsappNumber}?text=${encodeURIComponent(`Hello! I would like to inquire about a bespoke order at ${brand.brandName}.`)}`;
 
   return (
     <Layout>

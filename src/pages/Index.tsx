@@ -4,7 +4,7 @@ import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
 import ProductQuickView from "@/components/ProductQuickView";
 import HeroCarousel from "@/components/HeroCarousel";
-import { products } from "@/data/products";
+import { useSite } from "@/context/SiteContext";
 import { Product } from "@/data/products";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,19 +12,16 @@ import { cn } from "@/lib/utils";
 // ── Aurore-style editorial banner slider (TRENDING section) ──────────────────
 // Matches Aurore's lakit-banner-list carousel: images with title overlay,
 // 2 visible on desktop / 1 on mobile, horizontal swipe supported.
-const TRENDING_BANNERS = [
-  { img: "/aurore/aurore-s2-img-a.jpg", label: "Women's Wear",    link: "/collections" },
-  { img: "/aurore/aurore-s2-img-b.jpg", label: "Men's Fashion",   link: "/collections" },
-  { img: "/aurore/aurore-s2-img-c.jpg", label: "Bridal Couture",  link: "/collections" },
-  { img: "/aurore/aurore-s2-img-d.jpg", label: "Accessories",     link: "/collections" },
-  { img: "/aurore/aurore-s2-img-e.jpg", label: "Shoes & Bags",    link: "/collections" },
-];
 
-function TrendingBannerSlider() {
+interface TrendingBannerSliderProps {
+  banners: Array<{ img: string; label: string; link: string }>;
+}
+
+function TrendingBannerSlider({ banners }: TrendingBannerSliderProps) {
   const VISIBLE_DESKTOP = 2;
   const SWIPE_THRESHOLD = 40;
-  const TOTAL = TRENDING_BANNERS.length;
-  const maxOffset = TOTAL - VISIBLE_DESKTOP;
+  const TOTAL = banners.length;
+  const maxOffset = Math.max(0, TOTAL - VISIBLE_DESKTOP);
 
   const [offset, setOffset] = useState(0);
   const [dragDelta, setDragDelta] = useState(0);
@@ -77,7 +74,7 @@ function TrendingBannerSlider() {
           transition: isDragging.current ? "none" : "transform 500ms cubic-bezier(0.25,0.46,0.45,0.94)",
         }}
       >
-        {TRENDING_BANNERS.map((b, i) => (
+        {banners.map((b, i) => (
           <Link
             key={i}
             to={b.link}
@@ -149,75 +146,15 @@ function pad(n: number) {
 }
 
 export default function Index() {
+  const { settings } = useSite();
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const countdown = useCountdown(10, 25, 30);
 
-  const trending = products.filter((p) => p.isTrending);
-  const newArrivals = products.filter((p) => p.isNew);
-  const bestSellers = products.filter((p) => p.featured);
+  const trending = settings.products.filter((p) => p.isTrending);
+  const newArrivals = settings.products.filter((p) => p.isNew);
+  const bestSellers = settings.products.filter((p) => p.featured);
 
-  const campaignItems = [
-    { label: "Women", img: "/aurore/aurore-s3-img-a.jpg", link: "/collections" },
-    { label: "Men", img: "/aurore/aurore-s3-img-b.jpg", link: "/collections" },
-    { label: "Bags", img: "/aurore/aurore-s3-img-c.jpg", link: "/collections" },
-    { label: "Shoes", img: "/aurore/aurore-s3-img-d.jpg", link: "/collections" },
-    { label: "Bridal", img: "/aurore/aurore-s3-img-e.jpg", link: "/collections" },
-    { label: "Accessories", img: "/aurore/aurore-s3-img-f.jpg", link: "/collections" },
-  ];
-
-  const testimonials = [
-    {
-      avatar: "/aurore/aurore-tt-a.jpg",
-      name: "Adaeze Okonkwo",
-      role: "Lagos, Nigeria",
-      rating: 5,
-      quote: "Smileyque transformed my wedding vision into reality. Every stitch was perfection — I felt like royalty walking down the aisle.",
-    },
-    {
-      avatar: "/aurore/aurore-tt-b.jpg",
-      name: "Fatima Al-Hassan",
-      role: "Abuja, Nigeria",
-      rating: 5,
-      quote: "The attention to detail is extraordinary. My Anarkali gown drew compliments all evening. Truly bespoke luxury.",
-    },
-  ];
-
-  const brands = [
-    { img: "/aurore/aurore-mm-a.jpg", name: "Brand A" },
-    { img: "/aurore/aurore-mm-b.jpg", name: "Brand B" },
-    { img: "/aurore/aurore-mm-c.jpg", name: "Brand C" },
-    { img: "/aurore/aurore-mm-d.jpg", name: "Brand D" },
-  ];
-
-  const blogPosts = [
-    {
-      img: "/aurore/aurore-s9-img-a.jpg",
-      date: "June 12, 2025",
-      title: "5 Bridal Trends Redefining Nigerian Fashion in 2025",
-      excerpt: "From intricate hand-beading to bold Ankara-fused silhouettes, discover the looks every bride is talking about.",
-    },
-    {
-      img: "/aurore/aurore-s9-img-b.jpg",
-      date: "May 28, 2025",
-      title: "How to Style Senator Wear for Every Occasion",
-      excerpt: "Senator wear has evolved far beyond formal ceremonies. Here's how to make it work for every event.",
-    },
-    {
-      img: "/aurore/aurore-s9-img-c.jpg",
-      date: "May 10, 2025",
-      title: "The Art of Bespoke: What Goes Into a Smileyque Creation",
-      excerpt: "Behind every piece lies a process of careful consultation, measurement, and craftsmanship. We lift the curtain.",
-    },
-  ];
-
-  const instaPhotos = [
-    "/aurore/aurore-pn-a.jpg",
-    "/aurore/aurore-pn-b.jpg",
-    "/aurore/aurore-pn-c.jpg",
-    "/aurore/aurore-pn-d.jpg",
-    "/aurore/aurore-pn-e.jpg",
-    "/aurore/aurore-pn-f.jpg",
-  ];
+  const { campaignItems, testimonials, blogPosts, instaPhotos, brandLogos, trendingBanners, brand } = settings;
 
   return (
     <Layout>
@@ -230,7 +167,7 @@ export default function Index() {
         <div className="flex animate-[marquee_25s_linear_infinite] whitespace-nowrap">
           {Array.from({ length: 6 }).map((_, i) => (
             <span key={i} className="font-inter text-xs tracking-[0.3em] uppercase mx-8">
-              Women's Fashion &nbsp;•&nbsp; Men's Senator Wear &nbsp;•&nbsp; Bridal Couture &nbsp;•&nbsp; Designer Shoes &nbsp;•&nbsp; Luxury Bags &nbsp;•&nbsp; Accessories
+              {brand.marqueText}
             </span>
           ))}
         </div>
@@ -249,7 +186,7 @@ export default function Index() {
             </Link>
           </div>
           {/* Aurore-style sliding editorial banners */}
-          <TrendingBannerSlider />
+          <TrendingBannerSlider banners={trendingBanners} />
           {/* Products grid: 2 cols mobile → 3 tablet → 4 desktop */}
           <div className="mt-8">
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
@@ -437,7 +374,7 @@ export default function Index() {
             <h2 className="font-playfair text-3xl md:text-4xl font-semibold">Shop By Top Brands</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center">
-            {brands.map((b, i) => (
+            {brandLogos.map((b, i) => (
               <div key={i} className="flex items-center justify-center p-4 border border-border hover:border-primary transition-colors duration-300">
                 <img src={b.img} alt={b.name} className="h-16 object-contain grayscale hover:grayscale-0 transition-all duration-300" loading="lazy" />
               </div>
@@ -484,7 +421,7 @@ export default function Index() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <p className="font-inter text-xs tracking-[0.4em] uppercase text-primary mb-2">Follow Us</p>
-            <h2 className="font-playfair text-4xl md:text-5xl font-semibold">@smileyque</h2>
+            <h2 className="font-playfair text-4xl md:text-5xl font-semibold">@{brand.instagram.replace(/.*instagram\.com\/?/i, "").replace(/\/$/, "") || brand.brandName.toLowerCase()}</h2>
             <div className="gold-divider" />
             <p className="font-inter text-sm text-muted-foreground">Follow us on Instagram for daily style inspiration</p>
           </div>
@@ -492,7 +429,7 @@ export default function Index() {
             {instaPhotos.map((img, i) => (
               <a
                 key={i}
-                href={`https://instagram.com/smileyque`}
+                href={brand.instagram || `https://instagram.com/${brand.brandName.toLowerCase()}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="aspect-square overflow-hidden group img-zoom block"

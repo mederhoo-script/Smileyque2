@@ -5,7 +5,7 @@ import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import SearchModal from "@/components/SearchModal";
 import ProductQuickView from "@/components/ProductQuickView";
 import { Product } from "@/data/products";
-import { brand } from "@/config/brand";
+import { useSite } from "@/context/SiteContext";
 
 interface LayoutProps {
   children: ReactNode;
@@ -14,6 +14,8 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const { settings } = useSite();
+  const { brand } = settings;
 
   return (
     <>
