@@ -1,8 +1,12 @@
 import { useState, useMemo } from "react";
-import { products, categories, Product, ProductCategory } from "@/data/products";
+import { products, categories, Product, ProductCategory, ProductOccasion } from "@/data/products";
 import { brand } from "@/config/brand";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -45,14 +49,16 @@ const ICONS = {
   mail: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
   map: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z",
   link: "M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14",
+  plus: "M12 4v16m8-8H4",
 };
 
 // ── Sidebar navigation items ──────────────────────────────────────────────────
-type Section = "dashboard" | "products" | "config";
+type Section = "dashboard" | "products" | "add-product" | "config";
 
 const NAV_ITEMS: { id: Section; label: string; iconPath: string }[] = [
   { id: "dashboard", label: "Dashboard", iconPath: ICONS.dashboard },
   { id: "products", label: "Products", iconPath: ICONS.products },
+  { id: "add-product", label: "Add Product", iconPath: ICONS.plus },
   { id: "config", label: "Brand Config", iconPath: ICONS.config },
 ];
 
@@ -348,6 +354,300 @@ function ProductsSection() {
   );
 }
 
+// ── Add Product section ───────────────────────────────────────────────────────
+const OCCASION_OPTIONS: ProductOccasion[] = ["Formal", "Wedding", "Casual", "Party", "Traditional", "Any"];
+const CATEGORY_OPTIONS = categories.filter((c) => c !== "All") as Exclude<ProductCategory, "All">[];
+
+function AddProductSection() {
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    fullDescription: "",
+    price: "",
+    originalPrice: "",
+    category: "" as Exclude<ProductCategory, "All"> | "",
+    occasion: "" as ProductOccasion | "",
+    image: "",
+    colors: "",
+    sizes: "",
+    featured: false,
+    isNew: false,
+    isTrending: false,
+  });
+
+  function handleChange(field: keyof typeof form, value: string | boolean) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setSubmitted(false);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitted(true);
+  }
+
+  function handleReset() {
+    setForm({
+      name: "",
+      description: "",
+      fullDescription: "",
+      price: "",
+      originalPrice: "",
+      category: "",
+      occasion: "",
+      image: "",
+      colors: "",
+      sizes: "",
+      featured: false,
+      isNew: false,
+      isTrending: false,
+    });
+    setSubmitted(false);
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="font-playfair text-3xl font-semibold mb-1">Add Product</h2>
+        <p className="text-sm text-muted-foreground font-inter">
+          Fill in the fields below to add a new product to the catalog.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Info */}
+        <Card className="border border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-playfair text-lg font-semibold">Basic Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-name" className="font-inter text-sm">Product Name <span className="text-destructive">*</span></Label>
+              <Input
+                id="ap-name"
+                placeholder="e.g. Luxury Ankara Blazer"
+                value={form.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                className="font-inter text-sm"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-desc" className="font-inter text-sm">Short Description <span className="text-destructive">*</span></Label>
+              <Textarea
+                id="ap-desc"
+                placeholder="A brief one-line description shown on the product card…"
+                value={form.description}
+                onChange={(e) => handleChange("description", e.target.value)}
+                className="font-inter text-sm resize-none"
+                rows={2}
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-full-desc" className="font-inter text-sm">Full Description</Label>
+              <Textarea
+                id="ap-full-desc"
+                placeholder="Detailed product story shown in the quick-view panel…"
+                value={form.fullDescription}
+                onChange={(e) => handleChange("fullDescription", e.target.value)}
+                className="font-inter text-sm resize-none"
+                rows={4}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pricing */}
+        <Card className="border border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-playfair text-lg font-semibold">Pricing</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-price" className="font-inter text-sm">Selling Price <span className="text-destructive">*</span></Label>
+              <Input
+                id="ap-price"
+                placeholder="e.g. ₦85,000"
+                value={form.price}
+                onChange={(e) => handleChange("price", e.target.value)}
+                className="font-inter text-sm"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-orig-price" className="font-inter text-sm">Original Price <span className="text-muted-foreground text-xs">(before discount)</span></Label>
+              <Input
+                id="ap-orig-price"
+                placeholder="e.g. ₦95,000"
+                value={form.originalPrice}
+                onChange={(e) => handleChange("originalPrice", e.target.value)}
+                className="font-inter text-sm"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Classification */}
+        <Card className="border border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-playfair text-lg font-semibold">Classification</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-category" className="font-inter text-sm">Category <span className="text-destructive">*</span></Label>
+              <Select
+                value={form.category}
+                onValueChange={(v) => handleChange("category", v)}
+                required
+              >
+                <SelectTrigger id="ap-category" className="font-inter text-sm">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <SelectItem key={c} value={c} className="font-inter text-sm">{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-occasion" className="font-inter text-sm">Occasion</Label>
+              <Select
+                value={form.occasion}
+                onValueChange={(v) => handleChange("occasion", v)}
+              >
+                <SelectTrigger id="ap-occasion" className="font-inter text-sm">
+                  <SelectValue placeholder="Select an occasion" />
+                </SelectTrigger>
+                <SelectContent>
+                  {OCCASION_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o} className="font-inter text-sm">{o}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Media */}
+        <Card className="border border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-playfair text-lg font-semibold">Media</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-image" className="font-inter text-sm">Primary Image URL <span className="text-destructive">*</span></Label>
+              <Input
+                id="ap-image"
+                type="url"
+                placeholder="https://example.com/product-image.jpg"
+                value={form.image}
+                onChange={(e) => handleChange("image", e.target.value)}
+                className="font-inter text-sm"
+                required
+              />
+            </div>
+            {form.image && (
+              <img
+                src={form.image}
+                alt="Preview"
+                className="h-32 w-32 object-cover rounded-lg border border-border bg-muted"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Variants */}
+        <Card className="border border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-playfair text-lg font-semibold">Variants</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-colors" className="font-inter text-sm">Colors</Label>
+              <Input
+                id="ap-colors"
+                placeholder="e.g. Red, Blue, Gold"
+                value={form.colors}
+                onChange={(e) => handleChange("colors", e.target.value)}
+                className="font-inter text-sm"
+              />
+              <p className="text-xs text-muted-foreground font-inter">Comma-separated list</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ap-sizes" className="font-inter text-sm">Sizes</Label>
+              <Input
+                id="ap-sizes"
+                placeholder="e.g. S, M, L, XL"
+                value={form.sizes}
+                onChange={(e) => handleChange("sizes", e.target.value)}
+                className="font-inter text-sm"
+              />
+              <p className="text-xs text-muted-foreground font-inter">Comma-separated list</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tags */}
+        <Card className="border border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-playfair text-lg font-semibold">Tags</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-6">
+            {[
+              { id: "ap-featured", field: "featured" as const, label: "Featured", description: "Show in featured collection" },
+              { id: "ap-new", field: "isNew" as const, label: "New Arrival", description: "Mark as newly added" },
+              { id: "ap-trending", field: "isTrending" as const, label: "Trending", description: "Show in trending section" },
+            ].map(({ id, field, label, description }) => (
+              <div key={id} className="flex items-start gap-3">
+                <Checkbox
+                  id={id}
+                  checked={form[field]}
+                  onCheckedChange={(v) => handleChange(field, Boolean(v))}
+                  className="mt-0.5"
+                />
+                <div>
+                  <Label htmlFor={id} className="font-inter text-sm cursor-pointer">{label}</Label>
+                  <p className="text-xs text-muted-foreground font-inter">{description}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Success banner */}
+        {submitted && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 flex items-start gap-3">
+            <Icon path="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-inter font-medium text-emerald-800">Product saved (placeholder)</p>
+              <p className="text-xs font-inter text-emerald-700 mt-0.5">
+                This is a UI placeholder — backend persistence is not yet wired up. To permanently add a product, append it to <code className="bg-emerald-100 px-1 rounded">src/data/products.ts</code>.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <Button type="submit" className="font-inter text-sm">
+            <Icon path={ICONS.plus} className="w-4 h-4" />
+            Save Product
+          </Button>
+          <Button type="button" variant="outline" className="font-inter text-sm" onClick={handleReset}>
+            Clear Form
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // ── Config row helper ─────────────────────────────────────────────────────────
 function ConfigRow({ label, value, iconPath, isLink = false }: {
   label: string;
@@ -581,6 +881,7 @@ export default function Admin() {
         <main className="flex-1 p-6 md:p-10 overflow-auto">
           {activeSection === "dashboard" && <DashboardSection />}
           {activeSection === "products" && <ProductsSection />}
+          {activeSection === "add-product" && <AddProductSection />}
           {activeSection === "config" && <BrandConfigSection />}
         </main>
       </div>
