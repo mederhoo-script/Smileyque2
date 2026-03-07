@@ -2,6 +2,13 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { products, categories, Product, ProductCategory, ProductOccasion } from "@/data/products";
 import { addProduct, getProducts, deleteProduct, updateProduct, uploadProductImage } from "@/lib/productsService";
+import {
+  getBrandConfig,
+  saveBrandConfig,
+  resetBrandConfig,
+  DEFAULT_BRAND_CONFIG,
+  type BrandConfig,
+} from "@/lib/brandConfigService";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -1242,136 +1249,373 @@ function AddProductSection({
   );
 }
 
-// ── Config row helper ─────────────────────────────────────────────────────────
-function ConfigRow({ label, value, iconPath, isLink = false }: {
-  label: string;
-  value: string;
-  iconPath?: string;
-  isLink?: boolean;
-}) {
-  return (
-    <div className="flex items-start gap-4 py-4">
-      {iconPath && (
-        <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0 mt-0.5">
-          <Icon path={iconPath} className="w-4 h-4 text-muted-foreground" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-inter text-muted-foreground tracking-wide uppercase mb-0.5">{label}</p>
-        {isLink ? (
-          <a
-            href={value}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-inter text-primary hover:underline break-all"
-          >
-            {value}
-          </a>
-        ) : (
-          <p className="text-sm font-inter break-all">{value}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ── Brand Config section ──────────────────────────────────────────────────────
 function BrandConfigSection() {
+  const [config, setConfig] = useState<BrandConfig>(DEFAULT_BRAND_CONFIG);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [hasFirestoreDoc, setHasFirestoreDoc] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Load config from Firestore; fall back to static defaults
+  useEffect(() => {
+    setLoading(true);
+    getBrandConfig()
+      .then((data) => {
+        if (data) {
+          setConfig(data);
+          setHasFirestoreDoc(true);
+        } else {
+          setConfig(DEFAULT_BRAND_CONFIG);
+          setHasFirestoreDoc(false);
+        }
+      })
+      .catch(() => {
+        setConfig(DEFAULT_BRAND_CONFIG);
+        setHasFirestoreDoc(false);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  function handleChange(field: keyof BrandConfig, value: string) {
+    setConfig((prev) => ({ ...prev, [field]: value }));
+    setSaveStatus("idle");
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setSaveStatus("idle");
+    setSaveError(null);
+    try {
+      await saveBrandConfig(config);
+      setHasFirestoreDoc(true);
+      setSaveStatus("success");
+    } catch (err) {
+      setSaveStatus("error");
+      setSaveError((err as Error).message || "Failed to save brand config.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleReset() {
+    if (
+      !window.confirm(
+        "Reset all brand settings to their built-in defaults? This will delete the Firestore config document."
+      )
+    )
+      return;
+    setResetting(true);
+    setSaveStatus("idle");
+    setSaveError(null);
+    try {
+      await resetBrandConfig();
+      setConfig(DEFAULT_BRAND_CONFIG);
+      setHasFirestoreDoc(false);
+      setSaveStatus("success");
+    } catch (err) {
+      setSaveStatus("error");
+      setSaveError((err as Error).message || "Failed to reset brand config.");
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h2 className="font-playfair text-3xl font-semibold">Brand Config</h2>
+        <p className="text-sm text-muted-foreground font-inter">Loading from Firestore…</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="font-playfair text-3xl font-semibold mb-1">Brand Config</h2>
-        <p className="text-sm text-muted-foreground font-inter">
-          All values loaded from <code className="text-xs bg-muted px-1.5 py-0.5 rounded">src/config/brand.ts</code> — read-only.
-        </p>
+    <form onSubmit={handleSave} className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h2 className="font-playfair text-3xl font-semibold mb-1">Brand Config</h2>
+          <p className="text-sm text-muted-foreground font-inter">
+            {hasFirestoreDoc
+              ? "Settings loaded from Firestore — edit and save below."
+              : "Using built-in defaults — save to persist your changes to Firestore."}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          {hasFirestoreDoc && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              disabled={resetting || saving}
+              className="font-inter text-xs"
+            >
+              {resetting ? "Resetting…" : "Reset to Defaults"}
+            </Button>
+          )}
+          <Button
+            type="submit"
+            size="sm"
+            disabled={saving || resetting}
+            className="font-inter text-xs"
+          >
+            {saving ? "Saving…" : "Save Changes"}
+          </Button>
+        </div>
       </div>
 
-      {/* Identity */}
+      {/* Status banner */}
+      {saveStatus === "success" && (
+        <p className="text-sm font-inter text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+          {hasFirestoreDoc
+            ? "Brand config saved to Firestore successfully."
+            : "Brand config reset to built-in defaults."}
+        </p>
+      )}
+      {saveStatus === "error" && (
+        <p className="text-sm font-inter text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-4 py-3">
+          {saveError}
+        </p>
+      )}
+
+      {/* ── Brand Identity ── */}
       <Card className="border border-border">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-3">
           <CardTitle className="font-playfair text-lg font-semibold">Brand Identity</CardTitle>
         </CardHeader>
-        <CardContent className="divide-y divide-border">
-          <ConfigRow label="Brand Name" value={brand.brandName} />
-          <ConfigRow label="Tagline" value={brand.tagline} />
-          <ConfigRow label="Sub Tagline" value={brand.subTagline} />
-          <div className="flex items-start gap-4 py-4">
-            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0 mt-0.5">
-              <Icon path={ICONS.star} className="w-4 h-4 text-muted-foreground" />
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="bc-brand-name" className="font-inter text-sm">Brand Name</Label>
+            <Input
+              id="bc-brand-name"
+              value={config.brandName}
+              onChange={(e) => handleChange("brandName", e.target.value)}
+              className="font-inter text-sm"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bc-tagline" className="font-inter text-sm">Tagline</Label>
+            <Input
+              id="bc-tagline"
+              value={config.tagline}
+              onChange={(e) => handleChange("tagline", e.target.value)}
+              className="font-inter text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bc-sub-tagline" className="font-inter text-sm">Sub Tagline</Label>
+            <Input
+              id="bc-sub-tagline"
+              value={config.subTagline}
+              onChange={(e) => handleChange("subTagline", e.target.value)}
+              className="font-inter text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bc-logo" className="font-inter text-sm">Logo URL</Label>
+            <Input
+              id="bc-logo"
+              type="url"
+              placeholder="https://example.com/logo.png or /images/logo.png"
+              value={config.logo}
+              onChange={(e) => handleChange("logo", e.target.value)}
+              className="font-inter text-sm"
+            />
+            {config.logo && (
+              <img
+                src={config.logo}
+                alt="Logo preview"
+                className="h-10 object-contain bg-muted rounded-md px-2 mt-1"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Contact & Ordering ── */}
+      <Card className="border border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-playfair text-lg font-semibold">Contact &amp; Ordering</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="bc-phone" className="font-inter text-sm">Phone (display)</Label>
+              <Input
+                id="bc-phone"
+                value={config.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
+                placeholder="+234 800 000 0000"
+                className="font-inter text-sm"
+              />
             </div>
-            <div>
-              <p className="text-xs font-inter text-muted-foreground tracking-wide uppercase mb-1">Logo</p>
-              <img src={brand.logo} alt="Brand logo" className="h-10 object-contain bg-muted rounded-md px-2" />
-              <p className="text-xs font-inter text-muted-foreground mt-1">{brand.logo}</p>
+            <div className="space-y-1.5">
+              <Label htmlFor="bc-email" className="font-inter text-sm">Email</Label>
+              <Input
+                id="bc-email"
+                type="email"
+                value={config.email}
+                onChange={(e) => handleChange("email", e.target.value)}
+                placeholder="hello@brand.com"
+                className="font-inter text-sm"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bc-whatsapp" className="font-inter text-sm">
+              WhatsApp Number{" "}
+              <span className="text-muted-foreground text-xs">(international format, no + or spaces)</span>
+            </Label>
+            <Input
+              id="bc-whatsapp"
+              value={config.whatsappNumber}
+              onChange={(e) => handleChange("whatsappNumber", e.target.value)}
+              placeholder="2348000000000"
+              className="font-inter text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bc-location" className="font-inter text-sm">Location / Address</Label>
+            <Textarea
+              id="bc-location"
+              value={config.location}
+              onChange={(e) => handleChange("location", e.target.value)}
+              className="font-inter text-sm resize-none"
+              rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Social Links ── */}
+      <Card className="border border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-playfair text-lg font-semibold">Social Links</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="bc-instagram" className="font-inter text-sm">Instagram URL</Label>
+              <Input
+                id="bc-instagram"
+                type="url"
+                value={config.instagram}
+                onChange={(e) => handleChange("instagram", e.target.value)}
+                placeholder="https://instagram.com/handle"
+                className="font-inter text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="bc-facebook" className="font-inter text-sm">Facebook URL</Label>
+              <Input
+                id="bc-facebook"
+                type="url"
+                value={config.facebook}
+                onChange={(e) => handleChange("facebook", e.target.value)}
+                placeholder="https://facebook.com/page"
+                className="font-inter text-sm"
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Contact */}
+      {/* ── Hero &amp; About Images ── */}
       <Card className="border border-border">
-        <CardHeader className="pb-2">
-          <CardTitle className="font-playfair text-lg font-semibold">Contact & Ordering</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="font-playfair text-lg font-semibold">Hero &amp; About Images</CardTitle>
         </CardHeader>
-        <CardContent className="divide-y divide-border">
-          <ConfigRow label="Phone" value={brand.phone} iconPath={ICONS.phone} />
-          <ConfigRow label="Email" value={brand.email} iconPath={ICONS.mail} />
-          <ConfigRow label="WhatsApp Number" value={brand.whatsappNumber} iconPath={ICONS.phone} />
-          <ConfigRow label="Location" value={brand.location} iconPath={ICONS.map} />
-        </CardContent>
-      </Card>
-
-      {/* Social */}
-      <Card className="border border-border">
-        <CardHeader className="pb-2">
-          <CardTitle className="font-playfair text-lg font-semibold">Social Links</CardTitle>
-        </CardHeader>
-        <CardContent className="divide-y divide-border">
-          <ConfigRow label="Instagram" value={brand.instagram} iconPath={ICONS.link} isLink />
-          <ConfigRow label="Facebook" value={brand.facebook} iconPath={ICONS.link} isLink />
-          <ConfigRow
-            label="WhatsApp Link"
-            value={`https://wa.me/${brand.whatsappNumber}`}
-            iconPath={ICONS.link}
-            isLink
-          />
-        </CardContent>
-      </Card>
-
-      {/* Hero Images */}
-      <Card className="border border-border">
-        <CardHeader className="pb-2">
-          <CardTitle className="font-playfair text-lg font-semibold">Hero Images</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {[
-            { label: "Primary Hero", src: brand.heroImage },
-            { label: "Secondary Hero", src: brand.heroImage2 },
-            { label: "About Image", src: brand.aboutImage },
-            { label: "Designer Image", src: brand.designerImage },
-          ].map(({ label, src }) => (
-            <div key={label} className="flex gap-4 items-start">
-              <img src={src} alt={label} className="w-24 h-16 object-cover rounded-md bg-muted shrink-0" />
-              <div>
-                <p className="text-xs font-inter text-muted-foreground tracking-wide uppercase mb-1">{label}</p>
-                <p className="text-xs font-inter text-muted-foreground break-all">{src}</p>
-              </div>
+        <CardContent className="space-y-5">
+          {(
+            [
+              { field: "heroImage", label: "Primary Hero Image URL" },
+              { field: "heroImage2", label: "Secondary Hero Image URL" },
+              { field: "aboutImage", label: "About Page Image URL" },
+              { field: "designerImage", label: "Designer Image URL" },
+            ] as { field: "heroImage" | "heroImage2" | "aboutImage" | "designerImage"; label: string }[]
+          ).map(({ field, label }) => (
+            <div key={field} className="space-y-1.5">
+              <Label htmlFor={`bc-${field}`} className="font-inter text-sm">{label}</Label>
+              <Input
+                id={`bc-${field}`}
+                type="url"
+                value={config[field]}
+                onChange={(e) => handleChange(field, e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                className="font-inter text-sm"
+              />
+              {config[field] && (
+                <img
+                  src={config[field]}
+                  alt={label}
+                  className="w-32 h-20 object-cover rounded-md bg-muted mt-1"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              )}
             </div>
           ))}
         </CardContent>
       </Card>
 
-      {/* WhatsApp message templates */}
+      {/* ── WhatsApp Message Templates ── */}
       <Card className="border border-border">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-3">
           <CardTitle className="font-playfair text-lg font-semibold">WhatsApp Message Templates</CardTitle>
         </CardHeader>
-        <CardContent className="divide-y divide-border">
-          <ConfigRow label="Greeting" value={brand.whatsappGreeting} />
-          <ConfigRow label="Closing" value={brand.whatsappClosing} />
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="bc-greeting" className="font-inter text-sm">Greeting</Label>
+            <Textarea
+              id="bc-greeting"
+              value={config.whatsappGreeting}
+              onChange={(e) => handleChange("whatsappGreeting", e.target.value)}
+              className="font-inter text-sm resize-none"
+              rows={2}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bc-closing" className="font-inter text-sm">Closing</Label>
+            <Textarea
+              id="bc-closing"
+              value={config.whatsappClosing}
+              onChange={(e) => handleChange("whatsappClosing", e.target.value)}
+              className="font-inter text-sm resize-none"
+              rows={2}
+            />
+          </div>
         </CardContent>
       </Card>
-    </div>
+
+      {/* Bottom save bar */}
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+        {hasFirestoreDoc && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+            disabled={resetting || saving}
+            className="font-inter text-xs"
+          >
+            {resetting ? "Resetting…" : "Reset to Defaults"}
+          </Button>
+        )}
+        <Button
+          type="submit"
+          size="sm"
+          disabled={saving || resetting}
+          className="font-inter text-xs"
+        >
+          {saving ? "Saving…" : "Save Changes"}
+        </Button>
+      </div>
+    </form>
   );
 }
 
