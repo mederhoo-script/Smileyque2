@@ -5,10 +5,10 @@
  * Copy example.env to .env and fill in your Firebase project values.
  */
 
-import { initializeApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
+import { getAuth, type Auth } from "firebase/auth";
 
 const requiredEnvVars = [
   "VITE_FIREBASE_API_KEY",
@@ -21,8 +21,8 @@ const requiredEnvVars = [
 
 const missing = requiredEnvVars.filter((key) => !import.meta.env[key]);
 if (missing.length > 0) {
-  throw new Error(
-    `Missing required Firebase environment variables: ${missing.join(", ")}.\n` +
+  console.error(
+    `[Firebase] Missing required environment variables: ${missing.join(", ")}.\n` +
       "Copy example.env to .env and fill in your Firebase project values."
   );
 }
@@ -37,9 +37,32 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Prevent duplicate app initialisation during HMR
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// Prevent duplicate app initialisation during HMR.
+// Using definite-assignment assertions (!) so TypeScript is satisfied.
+// Wrapped in try-catch so a misconfigured environment logs a clear console
+// error instead of throwing at module level and producing a blank screen.
+// If init fails, exports remain undefined; any Firebase call will throw a
+// TypeError that React's ErrorBoundary (in main.tsx) will catch and display
+// as a helpful setup message rather than a blank page.
+let db!: Firestore;
+let storage!: FirebaseStorage;
+let auth!: Auth;
 
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-export const auth = getAuth(app);
+/** True when Firebase initialised successfully; false when env vars are missing or init failed. */
+export let firebaseConfigured = false;
+
+try {
+  const app: FirebaseApp =
+    getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  db = getFirestore(app);
+  storage = getStorage(app);
+  auth = getAuth(app);
+  firebaseConfigured = true;
+} catch (err) {
+  console.error(
+    "[Firebase] Initialisation failed. Verify that all VITE_FIREBASE_* variables in your .env file are correct.\n",
+    err
+  );
+}
+
+export { db, storage, auth };
