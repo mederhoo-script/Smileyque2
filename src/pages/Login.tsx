@@ -100,10 +100,8 @@ export default function Login() {
           </form>
 
           <p className="mt-6 text-center text-xs text-muted-foreground font-inter">
-            Don&apos;t have an account?{" "}
-            <Link to="/register" className="text-primary underline underline-offset-4 hover:text-primary/80">
-              Register
-            </Link>
+            Don&apos;t have an account contact Mederhoo
+            
           </p>
         </div>
       </div>
