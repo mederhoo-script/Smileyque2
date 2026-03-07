@@ -7,14 +7,12 @@
 
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
-import { getStorage, type FirebaseStorage } from "firebase/storage";
 import { getAuth, type Auth } from "firebase/auth";
 
 const requiredEnvVars = [
   "VITE_FIREBASE_API_KEY",
   "VITE_FIREBASE_AUTH_DOMAIN",
   "VITE_FIREBASE_PROJECT_ID",
-  "VITE_FIREBASE_STORAGE_BUCKET",
   "VITE_FIREBASE_MESSAGING_SENDER_ID",
   "VITE_FIREBASE_APP_ID",
 ] as const;
@@ -45,7 +43,6 @@ const firebaseConfig = {
 // TypeError that React's ErrorBoundary (in main.tsx) will catch and display
 // as a helpful setup message rather than a blank page.
 let db!: Firestore;
-let storage!: FirebaseStorage;
 let auth!: Auth;
 
 /** True when Firebase initialised successfully; false when env vars are missing or init failed. */
@@ -55,7 +52,6 @@ try {
   const app: FirebaseApp =
     getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   db = getFirestore(app);
-  storage = getStorage(app);
   auth = getAuth(app);
   firebaseConfigured = true;
 } catch (err) {
@@ -65,4 +61,4 @@ try {
   );
 }
 
-export { db, storage, auth };
+export { db, auth };
