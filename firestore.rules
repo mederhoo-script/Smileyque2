@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Products collection: publicly readable.
+    // Only authenticated users may create, update, or delete documents.
+    // Field-type validation is enforced to prevent arbitrary data injection.
+    match /products/{productId} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+                   && request.resource.data.keys().hasAll(['name', 'description', 'price', 'category', 'image'])
+                   && request.resource.data.name is string
+                   && request.resource.data.price is string
+                   && request.resource.data.category is string
+                   && request.resource.data.image is string;
+
+      allow update: if request.auth != null
+                   && request.resource.data.keys().hasAll(['name', 'description', 'price', 'category', 'image'])
+                   && request.resource.data.name is string
+                   && request.resource.data.price is string
+                   && request.resource.data.category is string
+                   && request.resource.data.image is string;
+
+      allow delete: if request.auth != null;
+    }
+
+    // Brand config: a single document (config/brand) storing dynamic brand
+    // settings.  Publicly readable so the storefront can fetch it; only
+    // authenticated users may write.
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

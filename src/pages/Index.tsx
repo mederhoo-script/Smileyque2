@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
@@ -6,6 +6,7 @@ import ProductQuickView from "@/components/ProductQuickView";
 import HeroCarousel from "@/components/HeroCarousel";
 import { products } from "@/data/products";
 import { Product } from "@/data/products";
+import { useHiddenProductIds } from "@/lib/hiddenProductsService";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -151,10 +152,15 @@ function pad(n: number) {
 export default function Index() {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const countdown = useCountdown(10, 25, 30);
+  const { hiddenIds } = useHiddenProductIds();
 
-  const trending = products.filter((p) => p.isTrending);
-  const newArrivals = products.filter((p) => p.isNew);
-  const bestSellers = products.filter((p) => p.featured);
+  const visibleProducts = useMemo(
+    () => products.filter((p) => !hiddenIds.includes(p.id)),
+    [hiddenIds]
+  );
+  const trending = useMemo(() => visibleProducts.filter((p) => p.isTrending), [visibleProducts]);
+  const newArrivals = useMemo(() => visibleProducts.filter((p) => p.isNew), [visibleProducts]);
+  const bestSellers = useMemo(() => visibleProducts.filter((p) => p.featured), [visibleProducts]);
 
   const campaignItems = [
     { label: "Women", img: "/aurore/aurore-s3-img-a.jpg", link: "/collections" },
