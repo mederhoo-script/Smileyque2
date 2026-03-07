@@ -9,6 +9,11 @@ import {
   DEFAULT_BRAND_CONFIG,
   type BrandConfig,
 } from "@/lib/brandConfigService";
+import {
+  useHiddenProductIds,
+  hideProduct,
+  restoreProduct,
+} from "@/lib/hiddenProductsService";
 import { brand } from "@/config/brand";
 import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -225,6 +230,11 @@ function ProductsSection({ onEdit }: { onEdit: (p: Product) => void }) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Hidden static products
+  const { hiddenIds, loading: hiddenLoading, refetch: refetchHidden } = useHiddenProductIds();
+  const [hiding, setHiding] = useState<string | null>(null);
+  const [hideError, setHideError] = useState<string | null>(null);
+
   const occasions = useMemo(() => {
     const set = new Set(products.map((p) => p.occasion).filter(Boolean) as string[]);
     return ["All", ...Array.from(set).sort()];
@@ -243,14 +253,44 @@ function ProductsSection({ onEdit }: { onEdit: (p: Product) => void }) {
     });
   }, [search, categoryFilter, occasionFilter]);
 
+  const visibleCount = products.filter((p) => !hiddenIds.includes(p.id)).length;
+  const hiddenProducts = products.filter((p) => hiddenIds.includes(p.id));
+
+  async function toggleHide(p: Product) {
+    const isHidden = hiddenIds.includes(p.id);
+    const action = isHidden ? "Restore" : "Hide";
+    if (!window.confirm(`${action} "${p.name}" ${isHidden ? "so it appears on the storefront again" : "from the storefront"}?`)) return;
+    setHiding(p.id);
+    setHideError(null);
+    try {
+      if (isHidden) {
+        await restoreProduct(p.id);
+      } else {
+        await hideProduct(p.id);
+      }
+      await refetchHidden();
+    } catch (err) {
+      setHideError((err as Error).message || "Action failed.");
+    } finally {
+      setHiding(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-playfair text-3xl font-semibold mb-1">Products</h2>
         <p className="text-sm text-muted-foreground font-inter">
-          {products.length} products across {categories.length - 1} categories — read-only.
+          {products.length} built-in products across {categories.length - 1} categories —{" "}
+          {hiddenLoading ? "…" : `${visibleCount} visible, ${hiddenIds.length} hidden`}.
         </p>
       </div>
+
+      {hideError && (
+        <p className="text-sm font-inter text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-4 py-3">
+          {hideError}
+        </p>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -296,7 +336,7 @@ function ProductsSection({ onEdit }: { onEdit: (p: Product) => void }) {
         Showing {filtered.length} of {products.length} products
       </p>
 
-      {/* Table */}
+      {/* Static products table */}
       <div className="rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
@@ -311,88 +351,179 @@ function ProductsSection({ onEdit }: { onEdit: (p: Product) => void }) {
                 <TableHead className="font-inter text-xs tracking-wide uppercase">Colors</TableHead>
                 <TableHead className="font-inter text-xs tracking-wide uppercase">Sizes</TableHead>
                 <TableHead className="font-inter text-xs tracking-wide uppercase">Tags</TableHead>
+                <TableHead className="font-inter text-xs tracking-wide uppercase w-24">Visibility</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((p: Product) => (
-                <TableRow key={p.id} className="hover:bg-muted/30">
-                  <TableCell>
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="w-10 h-10 object-cover rounded-md bg-muted"
-                    />
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
-                    {p.id}
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-inter text-sm font-medium">{p.name}</p>
-                      <p className="font-inter text-xs text-muted-foreground line-clamp-1 max-w-xs">
-                        {p.description}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-inter text-xs whitespace-nowrap">
-                      {p.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <p className="font-inter text-sm font-medium text-primary">{p.price}</p>
-                    {p.originalPrice && (
-                      <p className="font-inter text-xs text-muted-foreground line-through">
-                        {p.originalPrice}
-                      </p>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-inter text-xs text-muted-foreground whitespace-nowrap">
-                    {p.occasion ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1 max-w-[120px]">
-                      {(p.colors ?? []).map((c) => (
-                        <span key={c} className="font-inter text-xs bg-muted px-1.5 py-0.5 rounded-sm whitespace-nowrap">
-                          {c}
-                        </span>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1 max-w-[100px]">
-                      {(p.sizes ?? []).map((s) => (
-                        <span key={s} className="font-inter text-xs bg-muted px-1.5 py-0.5 rounded-sm">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {p.featured && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary hover:bg-primary/10 border-0">
-                          Featured
-                        </Badge>
+              {filtered.map((p: Product) => {
+                const isHidden = hiddenIds.includes(p.id);
+                return (
+                  <TableRow
+                    key={p.id}
+                    className={`hover:bg-muted/30 ${isHidden ? "opacity-50" : ""}`}
+                  >
+                    <TableCell>
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        className="w-10 h-10 object-cover rounded-md bg-muted"
+                      />
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                      {p.id}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-inter text-sm font-medium">{p.name}</p>
+                        <p className="font-inter text-xs text-muted-foreground line-clamp-1 max-w-xs">
+                          {p.description}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-inter text-xs whitespace-nowrap">
+                        {p.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <p className="font-inter text-sm font-medium text-primary">{p.price}</p>
+                      {p.originalPrice && (
+                        <p className="font-inter text-xs text-muted-foreground line-through">
+                          {p.originalPrice}
+                        </p>
                       )}
-                      {p.isNew && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-0">
-                          New
-                        </Badge>
-                      )}
-                      {p.isTrending && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-violet-50 text-violet-700 hover:bg-violet-50 border-0">
-                          Trending
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell className="font-inter text-xs text-muted-foreground whitespace-nowrap">
+                      {p.occasion ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[120px]">
+                        {(p.colors ?? []).map((c) => (
+                          <span key={c} className="font-inter text-xs bg-muted px-1.5 py-0.5 rounded-sm whitespace-nowrap">
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[100px]">
+                        {(p.sizes ?? []).map((s) => (
+                          <span key={s} className="font-inter text-xs bg-muted px-1.5 py-0.5 rounded-sm">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {p.featured && (
+                          <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary hover:bg-primary/10 border-0">
+                            Featured
+                          </Badge>
+                        )}
+                        {p.isNew && (
+                          <Badge className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-0">
+                            New
+                          </Badge>
+                        )}
+                        {p.isTrending && (
+                          <Badge className="text-[10px] px-1.5 py-0 bg-violet-50 text-violet-700 hover:bg-violet-50 border-0">
+                            Trending
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col items-start gap-1">
+                        {isHidden && (
+                          <Badge className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 hover:bg-amber-50 border-0 mb-1">
+                            Hidden
+                          </Badge>
+                        )}
+                        <button
+                          onClick={() => toggleHide(p)}
+                          disabled={hiding === p.id || hiddenLoading}
+                          className={`font-inter text-xs hover:underline disabled:opacity-50 ${
+                            isHidden ? "text-emerald-600" : "text-amber-600"
+                          }`}
+                        >
+                          {hiding === p.id
+                            ? isHidden ? "Restoring…" : "Hiding…"
+                            : isHidden ? "Restore" : "Hide"}
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
       </div>
+
+      {/* ── Hidden Products recovery panel ─────────────────────────────── */}
+      {!hiddenLoading && hiddenProducts.length > 0 && (
+        <div>
+          <h3 className="font-playfair text-xl font-semibold mt-10 mb-1">
+            Hidden Products
+            <span className="ml-2 font-inter text-sm text-muted-foreground font-normal">
+              ({hiddenProducts.length} product{hiddenProducts.length !== 1 ? "s" : ""} hidden from storefront)
+            </span>
+          </h3>
+          <p className="text-sm text-muted-foreground font-inter mb-4">
+            These built-in products are hidden from visitors. Click <strong>Restore</strong> to make them visible again.
+          </p>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/30 overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-amber-50/60 hover:bg-amber-50/60">
+                    <TableHead className="font-inter text-xs tracking-wide uppercase w-16">Image</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Name</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Category</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Price</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase w-24">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {hiddenProducts.map((p) => (
+                    <TableRow key={p.id} className="hover:bg-amber-50/40">
+                      <TableCell>
+                        <img
+                          src={p.image}
+                          alt={p.name}
+                          className="w-10 h-10 object-cover rounded-md bg-muted opacity-60"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-inter text-sm font-medium text-muted-foreground">{p.name}</p>
+                        <p className="font-mono text-xs text-muted-foreground">{p.id}</p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-inter text-xs whitespace-nowrap opacity-60">
+                          {p.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-inter text-sm text-muted-foreground whitespace-nowrap">
+                        {p.price}
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          onClick={() => toggleHide(p)}
+                          disabled={hiding === p.id}
+                          className="font-inter text-xs text-emerald-600 hover:underline disabled:opacity-50"
+                        >
+                          {hiding === p.id ? "Restoring…" : "Restore"}
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Firestore Products ─────────────────────────────────────────── */}
       <div>
@@ -526,7 +657,7 @@ function ProductsSection({ onEdit }: { onEdit: (p: Product) => void }) {
                               try {
                                 await remove(p.id);
                               } catch (err) {
-                                setDeleteError((err as Error).message ?? "Delete failed.");
+                                setDeleteError((err as Error).message || "Delete failed.");
                               } finally {
                                 setDeleting(null);
                               }

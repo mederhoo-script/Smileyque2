@@ -3,6 +3,7 @@ import { X, Search, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { products, ProductCategory, ProductOccasion, categories } from "@/data/products";
 import ProductCard from "@/components/ProductCard";
 import { Product } from "@/data/products";
+import { useHiddenProductIds } from "@/lib/hiddenProductsService";
 import { cn } from "@/lib/utils";
 
 interface SearchModalProps {
@@ -29,6 +30,11 @@ export default function SearchModal({ isOpen, onClose, onQuickView }: SearchModa
     const [selectedPriceRange, setSelectedPriceRange] = useState<number>(-1);
     const [sort, setSort] = useState<SortOption>("newest");
     const [showFilters, setShowFilters] = useState(false);
+    const { hiddenIds } = useHiddenProductIds();
+    const visibleProducts = useMemo(
+        () => products.filter((p) => !hiddenIds.includes(p.id)),
+        [hiddenIds]
+    );
 
     // Reset on open
     useEffect(() => {
@@ -61,7 +67,7 @@ export default function SearchModal({ isOpen, onClose, onQuickView }: SearchModa
     }, [isOpen]);
 
     const filteredProducts = useMemo(() => {
-        let result = [...products];
+        let result = [...visibleProducts];
 
         // Text search
         if (query.trim()) {
@@ -110,7 +116,7 @@ export default function SearchModal({ isOpen, onClose, onQuickView }: SearchModa
         }
 
         return result;
-    }, [query, selectedCategory, selectedOccasion, selectedPriceRange, sort]);
+    }, [query, selectedCategory, selectedOccasion, selectedPriceRange, sort, hiddenIds]);
 
     if (!isOpen) return null;
 

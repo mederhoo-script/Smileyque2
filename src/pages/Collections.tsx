@@ -1,19 +1,29 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
 import ProductQuickView from "@/components/ProductQuickView";
 import { products, categories, ProductCategory } from "@/data/products";
 import { Product } from "@/data/products";
+import { useHiddenProductIds } from "@/lib/hiddenProductsService";
 import { cn } from "@/lib/utils";
 
 export default function Collections() {
   const [activeCategory, setActiveCategory] = useState<ProductCategory>("All");
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const { hiddenIds } = useHiddenProductIds();
 
-  const filtered =
-    activeCategory === "All"
-      ? products
-      : products.filter((p) => p.category === activeCategory);
+  const visibleProducts = useMemo(
+    () => products.filter((p) => !hiddenIds.includes(p.id)),
+    [hiddenIds]
+  );
+
+  const filtered = useMemo(
+    () =>
+      activeCategory === "All"
+        ? visibleProducts
+        : visibleProducts.filter((p) => p.category === activeCategory),
+    [activeCategory, visibleProducts]
+  );
 
   return (
     <Layout>
