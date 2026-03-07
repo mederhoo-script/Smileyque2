@@ -1,9 +1,8 @@
 /**
  * Firebase initialisation
  *
- * Firebase web API keys are intentionally public — security is enforced via
- * Firestore Security Rules, not by keeping the client config secret.
- * See: https://firebase.google.com/docs/projects/api-keys#api-keys-for-firebase-are-different
+ * Configuration is read from environment variables (see example.env).
+ * Copy example.env to .env and fill in your Firebase project values.
  */
 
 import { initializeApp, getApps } from "firebase/app";
@@ -11,14 +10,31 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 
+const requiredEnvVars = [
+  "VITE_FIREBASE_API_KEY",
+  "VITE_FIREBASE_AUTH_DOMAIN",
+  "VITE_FIREBASE_PROJECT_ID",
+  "VITE_FIREBASE_STORAGE_BUCKET",
+  "VITE_FIREBASE_MESSAGING_SENDER_ID",
+  "VITE_FIREBASE_APP_ID",
+] as const;
+
+const missing = requiredEnvVars.filter((key) => !import.meta.env[key]);
+if (missing.length > 0) {
+  throw new Error(
+    `Missing required Firebase environment variables: ${missing.join(", ")}.\n` +
+      "Copy example.env to .env and fill in your Firebase project values."
+  );
+}
+
 const firebaseConfig = {
-  apiKey: "AIzaSyD_n8A9lNoaPgdEHxokqY-A0OAryHEsR4g",
-  authDomain: "vtu-platform.firebaseapp.com",
-  projectId: "vtu-platform",
-  storageBucket: "vtu-platform.firebasestorage.app",
-  messagingSenderId: "730960900503",
-  appId: "1:730960900503:web:7daabad4f38ae213b414d2",
-  measurementId: "G-7V34R30WW1",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Prevent duplicate app initialisation during HMR
