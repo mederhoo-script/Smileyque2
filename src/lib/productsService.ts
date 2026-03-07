@@ -19,7 +19,7 @@ import {
   DocumentData,
   QueryDocumentSnapshot,
 } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import type { Product } from "@/data/products";
 
@@ -79,14 +79,19 @@ export async function updateProduct(id: string, data: Omit<Product, "id">): Prom
 /**
  * Upload a product image file to Firebase Storage.
  *
- * Files are stored under `products/{timestamp}_{view}_{originalFilename}`.
- * The upload is wrapped in a 30-second timeout; if it does not complete in
- * time (e.g. due to Storage security rules or a network stall) the task is
- * cancelled and a descriptive error is thrown so the UI is never left stuck.
+ * Files are stored under `products/{timestamp}_{unique}_{view}_{originalFilename}`.
  *
- * @param file  The image File object selected by the user.
- * @param view  Semantic view name — "front" | "left" | "right" | "back".
- * @returns     The public download URL for the uploaded image.
+ * Uses `uploadBytes` (the simple Promise-based API) rather than
+ * `uploadBytesResumable` so we avoid the UploadTask promise-chain quirks.
+ * Content-type metadata is passed explicitly so the Firebase Storage security
+ * rule `request.resource.contentType.matches('image/.*')` is satisfied.
+ *
+ * A 30-second `Promise.race` timeout guards against stalled uploads.
+ *
+ * @param file       The image File object selected by the user.
+ * @param view       Semantic view name — "front" | "left" | "right" | "back".
+ * @param timeoutMs  Milliseconds before the upload is considered timed out.
+ * @returns          The public download URL for the uploaded image.
  */
 export async function uploadProductImage(
   file: File,
@@ -104,37 +109,44 @@ export async function uploadProductImage(
   const path = `products/${unique}_${view}_${safeName}`;
 
   const storageRef = ref(storage, path);
-  const uploadTask = uploadBytesResumable(storageRef, file);
 
-  return new Promise<string>((resolve, reject) => {
-    let settled = false;
+  // Pass content-type explicitly so Firebase Storage security rules that
+  // check `request.resource.contentType.matches('image/.*')` are satisfied.
+  // `file.type` is set by the browser from the file's MIME type. If it is
+  // empty (rare, but possible on some mobile browsers), derive it from the
+  // file extension. Fall back to 'image/jpeg' as a last resort — the file
+  // input already restricts selection to `accept="image/*"`, so any selected
+  // file is an image and the fallback will satisfy the `image/.*` rule.
+  const EXT_MIME: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml",
+    bmp: "image/bmp",
+    avif: "image/avif",
+  };
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const contentType = file.type || EXT_MIME[ext] || "image/jpeg";
+  const metadata = { contentType };
 
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      uploadTask.cancel();
-      reject(
-        new Error(
-          `Image upload timed out after ${timeoutMs / 1000}s. ` +
-          "Ensure Firebase Storage security rules allow writes and your internet connection is stable."
-        )
-      );
-    }, timeoutMs);
+  const uploadPromise = uploadBytes(storageRef, file, metadata).then(
+    (snapshot) => getDownloadURL(snapshot.ref)
+  );
 
-    uploadTask
-      .then((snapshot) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        return getDownloadURL(snapshot.ref);
-      })
-      .then((url) => { if (url) resolve(url); })
-      .catch((err) => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-        }
-        reject(err);
-      });
-  });
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(
+      () =>
+        reject(
+          new Error(
+            `Image upload timed out after ${timeoutMs / 1000}s. ` +
+              "Ensure Firebase Storage security rules allow writes and your internet connection is stable."
+          )
+        ),
+      timeoutMs
+    )
+  );
+
+  return Promise.race([uploadPromise, timeoutPromise]);
 }
