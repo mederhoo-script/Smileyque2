@@ -420,6 +420,10 @@ function ProductsSection({ onEdit }: { onEdit: (p: Product) => void }) {
                     <TableHead className="font-inter text-xs tracking-wide uppercase">Name</TableHead>
                     <TableHead className="font-inter text-xs tracking-wide uppercase">Category</TableHead>
                     <TableHead className="font-inter text-xs tracking-wide uppercase">Price</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Occasion</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Colors</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Sizes</TableHead>
+                    <TableHead className="font-inter text-xs tracking-wide uppercase">Tags</TableHead>
                     <TableHead className="font-inter text-xs tracking-wide uppercase w-24">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -431,6 +435,7 @@ function ProductsSection({ onEdit }: { onEdit: (p: Product) => void }) {
                           src={p.image}
                           alt={p.name}
                           className="w-10 h-10 object-cover rounded-md bg-muted"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
@@ -447,8 +452,53 @@ function ProductsSection({ onEdit }: { onEdit: (p: Product) => void }) {
                           {p.category}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-inter text-sm font-medium text-primary whitespace-nowrap">
-                        {p.price}
+                      <TableCell className="whitespace-nowrap">
+                        <p className="font-inter text-sm font-medium text-primary">{p.price}</p>
+                        {p.originalPrice && (
+                          <p className="font-inter text-xs text-muted-foreground line-through">
+                            {p.originalPrice}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-inter text-xs text-muted-foreground whitespace-nowrap">
+                        {p.occasion ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-[120px]">
+                          {(p.colors ?? []).map((c) => (
+                            <span key={c} className="font-inter text-xs bg-muted px-1.5 py-0.5 rounded-sm whitespace-nowrap">
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-[100px]">
+                          {(p.sizes ?? []).map((s) => (
+                            <span key={s} className="font-inter text-xs bg-muted px-1.5 py-0.5 rounded-sm">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {p.featured && (
+                            <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary hover:bg-primary/10 border-0">
+                              Featured
+                            </Badge>
+                          )}
+                          {p.isNew && (
+                            <Badge className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-0">
+                              New
+                            </Badge>
+                          )}
+                          {p.isTrending && (
+                            <Badge className="text-[10px] px-1.5 py-0 bg-violet-50 text-violet-700 hover:bg-violet-50 border-0">
+                              Trending
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {deleteError && deleting === p.id && (
