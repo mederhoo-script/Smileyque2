@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { products, categories, Product, ProductCategory, ProductOccasion } from "@/data/products";
 import { addProduct, getProducts, deleteProduct, updateProduct, uploadProductImage } from "@/lib/productsService";
 import { brand } from "@/config/brand";
+import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1328,6 +1330,8 @@ export default function Admin() {
   const [activeSection, setActiveSection] = useState<Section>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const { logout, currentUser } = useAuth();
+  const navigate = useNavigate();
 
   function handleEdit(p: Product) {
     setEditingProduct(p);
@@ -1394,8 +1398,26 @@ export default function Admin() {
         </nav>
 
         {/* Footer */}
-        <div className="px-6 py-5 border-t border-white/10">
-          <p className="text-[10px] font-inter text-white/30 tracking-wide">
+        <div className="px-6 py-5 border-t border-white/10 space-y-3">
+          {currentUser && (
+            <p
+              className="text-[10px] font-inter text-white/40 tracking-wide truncate"
+              {...(currentUser.email ? { title: currentUser.email } : {})}
+            >
+              {currentUser.email}
+            </p>
+          )}
+          <button
+            onClick={async () => {
+              try { await logout(); } catch { /* ignore */ }
+              navigate("/login", { replace: true });
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-inter text-white/60 hover:text-white hover:bg-white/10 transition-colors text-left"
+          >
+            <Icon path="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" className="w-4 h-4 shrink-0" />
+            Sign out
+          </button>
+          <p className="text-[10px] font-inter text-white/20 tracking-wide">
             Firebase · Firestore CRUD
           </p>
         </div>
